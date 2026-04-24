@@ -1,4 +1,4 @@
-import { Dialog, DialogPanel, DialogTitle, Switch } from '@headlessui/react'
+﻿import { Dialog, DialogPanel, DialogTitle, Switch } from '@headlessui/react'
 import {
   ChartBarIcon,
   CheckIcon,
@@ -634,6 +634,7 @@ function TagPicker({
 function ViewPage() {
   const records = useLaborStore((state) => state.records)
   const [period, setPeriod] = useState<ViewPeriod>('week')
+  const [showCharts, setShowCharts] = useState(false)
 
   const grouped = useMemo(() => {
     const totals = new Map<string, number>()
@@ -694,77 +695,102 @@ function ViewPage() {
 
   return (
     <div className="space-y-4 text-left">
-      <div className="grid grid-cols-3 gap-2">
-        {(['day', 'week', 'month'] as const).map((item) => (
-          <button
-            key={item}
-            className={`rounded-md px-3 py-2 text-sm font-semibold ${period === item ? 'bg-teal-700 text-white' : 'bg-white text-stone-600'}`}
-            type="button"
-            onClick={() => setPeriod(item)}
-          >
-            {item === 'day' ? '日' : item === 'week' ? '周' : '月'}
-          </button>
-        ))}
+      <div className="flex items-center justify-between rounded-md border border-stone-200 bg-white p-3 shadow-sm">
+        <div>
+          <p className="text-sm font-semibold text-stone-950">
+            {showCharts ? '图表模式' : '记录模式'}
+          </p>
+          <p className="mt-0.5 text-xs text-stone-500">
+            {showCharts ? '查看劳动统计' : '查看记录明细'}
+          </p>
+        </div>
+        <Switch
+          checked={showCharts}
+          className={`${showCharts ? 'bg-teal-700' : 'bg-stone-300'} relative inline-flex h-8 w-16 items-center rounded-full transition`}
+          onChange={setShowCharts}
+        >
+          <span className="sr-only">切换查看模式</span>
+          <span
+            className={`${showCharts ? 'translate-x-9' : 'translate-x-1'} inline-block h-6 w-6 rounded-full bg-white transition`}
+          />
+        </Switch>
       </div>
 
-      <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-stone-950">时长统计</h2>
-        {records.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <ReactECharts className="h-56" option={barOption} />
-        )}
-      </section>
+      {showCharts ? (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            {(['day', 'week', 'month'] as const).map((item) => (
+              <button
+                key={item}
+                className={`rounded-md px-3 py-2 text-sm font-semibold ${period === item ? 'bg-teal-700 text-white' : 'bg-white text-stone-600'}`}
+                type="button"
+                onClick={() => setPeriod(item)}
+              >
+                {item === 'day' ? '日' : item === 'week' ? '周' : '月'}
+              </button>
+            ))}
+          </div>
 
-      <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-stone-950">Tag 分布</h2>
-        {tagTotals.length === 0 ? (
-          <p className="mt-4 text-sm text-stone-400">暂无 tag 数据</p>
-        ) : (
-          <ReactECharts className="h-56" option={pieOption} />
-        )}
-      </section>
+          <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+            <h2 className="text-base font-semibold text-stone-950">时长统计</h2>
+            {records.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ReactECharts className="h-56" option={barOption} />
+            )}
+          </section>
 
-      <section className="space-y-3">
-        {records.map((record) => (
-          <article
-            key={record.wid}
-            className="rounded-md border border-stone-200 bg-white p-4 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-stone-950">
-                  {record.outcome}
-                </h3>
-                <p className="mt-1 text-xs text-stone-500">
-                  {formatDate(record.startAt)} ·{' '}
-                  {formatDuration(getDurationSeconds(record))}
-                </p>
-              </div>
-              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                已签名
-              </span>
-            </div>
-            <p className="mt-3 whitespace-pre-wrap text-sm text-stone-700">
-              {record.description}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {record.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="tag-chip bg-stone-100 text-stone-600"
-                >
-                  {tag}
+          <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+            <h2 className="text-base font-semibold text-stone-950">Tag 分布</h2>
+            {tagTotals.length === 0 ? (
+              <p className="mt-4 text-sm text-stone-400">暂无 tag 数据</p>
+            ) : (
+              <ReactECharts className="h-56" option={pieOption} />
+            )}
+          </section>
+        </>
+      ) : (
+        <section className="space-y-3">
+          {records.length === 0 && <EmptyState />}
+          {records.map((record) => (
+            <article
+              key={record.wid}
+              className="rounded-md border border-stone-200 bg-white p-4 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-stone-950">
+                    {record.outcome}
+                  </h3>
+                  <p className="mt-1 text-xs text-stone-500">
+                    {formatDate(record.startAt)} ·{' '}
+                    {formatDuration(getDurationSeconds(record))}
+                  </p>
+                </div>
+                <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                  已签名
                 </span>
-              ))}
-            </div>
-          </article>
-        ))}
-      </section>
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm text-stone-700">
+                {record.description}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {record.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="tag-chip bg-stone-100 text-stone-600"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
     </div>
   )
 }
-
 function EmptyState() {
   return (
     <p className="mt-4 rounded-md bg-stone-50 px-3 py-6 text-center text-sm text-stone-400">
@@ -930,7 +956,34 @@ function UserPage() {
           导出 JSON
         </button>
       </section>
+
+      <a
+        className="mx-auto flex w-fit items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-stone-500 transition hover:bg-stone-100 hover:text-stone-950"
+        href="https://github.com/Ri0n72Y/labour-flow"
+        rel="noreferrer"
+        target="_blank"
+      >
+        <GitHubIcon />
+        GitHub
+      </a>
     </div>
+  )
+}
+
+function GitHubIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        clipRule="evenodd"
+        d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.38-3.37-1.38-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.86.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.3.1-2.72 0 0 .84-.28 2.75 1.05A9.28 9.28 0 0 1 12 6.95c.85 0 1.7.12 2.5.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.64 1.03 2.76 0 3.95-2.34 4.82-4.57 5.07.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.8 0 .27.18.59.69.49A10.2 10.2 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"
+        fillRule="evenodd"
+      />
+    </svg>
   )
 }
 
