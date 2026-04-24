@@ -52,7 +52,12 @@ export function formatMonth(dateInput: string | Date) {
   return datePart
 }
 
-export function getDurationSeconds(record: Pick<SignedLaborRecord, 'startAt' | 'endAt'>) {
+export function getDurationSeconds(
+  record: Pick<SignedLaborRecord, 'startAt' | 'endAt'> & { duration?: number },
+) {
+  if ('duration' in record && typeof record.duration === 'number') {
+    return Math.max(0, Math.round(record.duration))
+  }
   return Math.max(0, Math.round((Date.parse(record.endAt) - Date.parse(record.startAt)) / 1000))
 }
 

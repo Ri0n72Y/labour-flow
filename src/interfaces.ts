@@ -2,6 +2,7 @@ export interface LaborData {
   wid: string
   startAt: string // UTC
   endAt: string // UTC
+  duration: number // in seconds
 
   createBy: string // public key
   createAt: string // UTC
@@ -14,12 +15,11 @@ export interface LaborData {
 }
 
 export interface RuntimeInfo extends LaborData {
-  duration: number // in seconds
   cover: string // cover image
 }
 
 export type RecordMode = 'timer' | 'manual'
-export type RecordStatus = 'idle' | 'running' | 'stopped'
+export type RecordStatus = 'idle' | 'running' | 'paused' | 'stopped'
 export type ViewPeriod = 'day' | 'week' | 'month'
 
 export interface LaborLogEntry {
@@ -42,7 +42,8 @@ export interface LaborDraft {
   status: RecordStatus
   startAt: string | null
   endAt: string | null
-  manualDate: string
+  pausedAt: string | null
+  pausedSeconds: number
   manualDurationHours: number
   logs: LaborLogEntry[]
   activeText: string

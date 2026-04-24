@@ -5,6 +5,8 @@ import {
   ClockIcon,
   DocumentArrowDownIcon,
   MicrophoneIcon,
+  ArrowPathIcon,
+  PauseIcon,
   PencilSquareIcon,
   PlayIcon,
   PlusIcon,
@@ -39,6 +41,7 @@ import {
   getDurationSeconds,
   groupKey,
   nowIso,
+  todayInputValue,
 } from './utils/time'
 
 type TabId = 'record' | 'view' | 'user'
@@ -173,20 +176,22 @@ function RecordPage() {
     status,
     startAt,
     endAt,
-    manualDate,
+    pausedAt,
+    pausedSeconds,
     manualDurationHours,
     logs,
     activeText,
     tags,
     setMode,
     startTimer,
+    pauseTimer,
+    resumeTimer,
     stopTimer,
     setActiveText,
     commitActiveLog,
     updateLog,
     removeLog,
     toggleTag,
-    setManualDate,
     setManualDuration,
     resetDraft,
   } = useRecordingStore()
@@ -205,16 +210,25 @@ function RecordPage() {
     return () => window.clearInterval(interval)
   }, [status])
 
+  const totalPausedSeconds = pausedSeconds ?? 0
   const elapsedSeconds =
     status === 'idle' || !startAt
       ? 0
       : Math.round(
-          ((endAt ? Date.parse(endAt) : clockTick || Date.parse(startAt)) -
-            Date.parse(startAt)) /
-            1000
+          Math.max(
+            0,
+            (endAt
+              ? Date.parse(endAt)
+              : status === 'paused' && pausedAt
+                ? Date.parse(pausedAt)
+                : clockTick || Date.parse(startAt)) - Date.parse(startAt)
+          ) /
+            1000 -
+            totalPausedSeconds
         )
 
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
+  const hasTimerDraft = Boolean(startAt) || status !== 'idle'
   const canSign =
     hasKeys &&
     (status === 'stopped' || mode === 'manual') &&
@@ -248,7 +262,7 @@ function RecordPage() {
     const latest = useRecordingStore.getState()
     const range =
       latest.mode === 'manual'
-        ? createManualRange(latest.manualDate, latest.manualDurationHours)
+        ? createManualRange(todayInputValue(), latest.manualDurationHours)
         : { startAt: latest.startAt, endAt: latest.endAt }
 
     if (!range.startAt || !range.endAt || latest.logs.length === 0) {
@@ -256,12 +270,23 @@ function RecordPage() {
       return
     }
 
+    const duration =
+      latest.mode === 'manual'
+        ? Math.round(latest.manualDurationHours * 3600)
+        : Math.max(
+            0,
+            Math.round(
+              (Date.parse(range.endAt) - Date.parse(range.startAt)) / 1000
+            ) - (latest.pausedSeconds ?? 0)
+          )
+
     setSigning(true)
     try {
       const recordBase: Omit<LaborData, 'signature'> = {
         wid: crypto.randomUUID(),
         startAt: range.startAt,
         endAt: range.endAt,
+        duration,
         createBy: publicKeyPayload(user.publicKeyJwk),
         createAt: nowIso(),
         outcome: latest.logs[0]?.text.slice(0, 36) || '劳动记录',
@@ -320,43 +345,43 @@ function RecordPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-md border border-stone-200 bg-white p-4 text-left shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-stone-500">记录模式</p>
-            <p className="mt-1 text-lg font-semibold text-stone-950">
-              {mode === 'timer' ? '实时计时' : '手动补录'}
-            </p>
-          </div>
-          <Switch
-            checked={mode === 'manual'}
-            className={`${mode === 'manual' ? 'bg-teal-700' : 'bg-stone-300'} relative inline-flex h-8 w-16 items-center rounded-full transition`}
-            onChange={(checked) => setMode(checked ? 'manual' : 'timer')}
-          >
-            <span className="sr-only">切换记录模式</span>
-            <span
-              className={`${mode === 'manual' ? 'translate-x-9' : 'translate-x-1'} inline-block h-6 w-6 rounded-full bg-white transition`}
-            />
-          </Switch>
-        </div>
-
-        {mode === 'timer' ? (
-          <div className="mt-4 rounded-md bg-stone-950 p-4 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-2xl font-semibold">
-                <ClockIcon className="h-6 w-6 text-amber-300" />
-                {formatDuration(elapsedSeconds)}
-              </div>
-              {status === 'running' ? (
-                <button
-                  className="icon-button bg-red-500 text-white"
-                  type="button"
-                  onClick={stopTimer}
-                  aria-label="结束计时"
-                >
-                  <StopIcon className="h-5 w-5" />
-                </button>
-              ) : (
+      {mode === 'timer' ? (
+        <section
+          className={`${status === 'idle' ? 'p-4' : 'px-3 py-2'} rounded-md bg-stone-950 text-left text-white shadow-sm`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {status === 'idle' && (
+                <>
+                  <p className="mt-1 text-lg font-semibold">实时计时</p>
+                </>
+              )}
+              {status !== 'idle' && (
+                <div className="flex min-w-0 items-center gap-2">
+                  <ClockIcon className="h-5 w-5 shrink-0 text-amber-300" />
+                  <span className="text-lg font-semibold">
+                    {formatDuration(elapsedSeconds)}
+                  </span>
+                  <span className="truncate text-xs text-stone-300">
+                    {status === 'paused'
+                      ? '已暂停'
+                      : status === 'stopped'
+                        ? `已结束 ${formatDateTime(endAt)}`
+                        : formatDateTime(startAt)}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Switch
+                checked={false}
+                className="relative inline-flex h-8 w-16 items-center rounded-full bg-stone-700 transition"
+                onChange={(checked) => setMode(checked ? 'manual' : 'timer')}
+              >
+                <span className="sr-only">切换记录模式</span>
+                <span className="inline-block h-6 w-6 translate-x-1 rounded-full bg-white transition" />
+              </Switch>
+              {status === 'idle' && (
                 <button
                   className="icon-button bg-teal-600 text-white"
                   type="button"
@@ -366,28 +391,78 @@ function RecordPage() {
                   <PlayIcon className="h-5 w-5" />
                 </button>
               )}
+              {status === 'running' && (
+                <button
+                  className="icon-button bg-amber-400 text-stone-950"
+                  type="button"
+                  onClick={pauseTimer}
+                  aria-label="暂停计时"
+                >
+                  <PauseIcon className="h-5 w-5" />
+                </button>
+              )}
+              {status === 'paused' && (
+                <button
+                  className="icon-button bg-teal-600 text-white"
+                  type="button"
+                  onClick={resumeTimer}
+                  aria-label="继续计时"
+                >
+                  <PlayIcon className="h-5 w-5" />
+                </button>
+              )}
+              {status !== 'idle' && status !== 'stopped' && (
+                <button
+                  className="icon-button bg-red-500 text-white"
+                  type="button"
+                  onClick={stopTimer}
+                  aria-label="结束计时"
+                >
+                  <StopIcon className="h-5 w-5" />
+                </button>
+              )}
+              {hasTimerDraft && (
+                <button
+                  className="icon-button bg-white text-stone-700"
+                  type="button"
+                  onClick={resetDraft}
+                  aria-label="重置记录"
+                >
+                  <ArrowPathIcon className="h-5 w-5" />
+                </button>
+              )}
             </div>
-            <p className="mt-2 text-xs text-stone-300">
-              {status === 'idle'
-                ? '自动记录开始时间'
-                : status === 'running'
-                  ? formatDateTime(startAt)
-                  : `已结束 ${formatDateTime(endAt)}`}
-            </p>
           </div>
-        ) : (
-          <div className="mt-4 grid grid-cols-[1fr_auto] gap-3">
-            <label className="text-sm font-medium text-stone-600">
-              日期
-              <input
-                className="input mt-1"
-                type="date"
-                value={manualDate}
-                onChange={(event) => setManualDate(event.target.value)}
-              />
-            </label>
-            <label className="text-sm font-medium text-stone-600">
-              小时
+          {status === 'idle' && (
+            <p className="mt-4 text-xs text-stone-300">自动记录开始时间</p>
+          )}
+        </section>
+      ) : (
+        <section className="rounded-md border border-stone-200 bg-white p-4 text-left shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="mt-1 text-lg font-semibold text-stone-950">
+                手动记录
+              </p>
+            </div>
+            <Switch
+              checked
+              className="relative inline-flex h-8 w-16 items-center rounded-full bg-teal-700 transition"
+              onChange={(checked) => setMode(checked ? 'manual' : 'timer')}
+            >
+              <span className="sr-only">切换记录模式</span>
+              <span className="inline-block h-6 w-6 translate-x-9 rounded-full bg-white transition" />
+            </Switch>
+          </div>
+          <div className="mt-4 grid grid-cols-[1fr_auto] items-end gap-3">
+            {/* <div>
+              <p className="text-sm font-medium text-stone-600">日期</p>
+              <p className="mt-1 rounded-md bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-700">
+                今天
+              </p>
+            </div> */}
+            <label className="text-sm font-medium text-stone-600 flex items-center gap-3">
+              <span className="shrink-0">小时</span>
               <input
                 className="input mt-1 w-24"
                 min="0.5"
@@ -400,8 +475,8 @@ function RecordPage() {
               />
             </label>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <Notebook
         activeText={activeText}
