@@ -1,17 +1,12 @@
+import * as ed25519 from '@noble/ed25519'
 import type { LaborData } from '../interfaces'
 
 const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
-const algorithm = {
-  name: 'Ed25519',
-} as const
-
 export async function generateIdentityKeys() {
-  const keyPair = await crypto.subtle.generateKey(algorithm, true, ['sign', 'verify'])
-  const [publicKeyJwk, privateKeyJwk] = await Promise.all([
-    crypto.subtle.exportKey('jwk', keyPair.publicKey),
-    crypto.subtle.exportKey('jwk', keyPair.privateKey),
-  ])
+  const { secretKey, publicKey } = await ed25519.keygenAsync()
+  const publicKeyJwk = createEd25519PublicJwk(publicKey)
+  const privateKeyJwk = createEd25519PrivateJwk(secretKey, publicKey)
 
   return { publicKeyJwk, privateKeyJwk }
 }
@@ -27,10 +22,10 @@ export function publicKeyPayload(publicKeyJwk: JsonWebKey | null) {
 }
 
 export async function signLaborRecord(record: Omit<LaborData, 'signature'>, privateKeyJwk: JsonWebKey) {
-  const privateKey = await crypto.subtle.importKey('jwk', privateKeyJwk, algorithm, true, ['sign'])
   const data = new TextEncoder().encode(stableStringify(record))
-  const signature = await crypto.subtle.sign(algorithm, privateKey, data)
-  return arrayBufferToBase64(signature)
+  const secretKey = privateJwkToEd25519SecretKey(privateKeyJwk)
+  const signature = await ed25519.signAsync(data, secretKey)
+  return bytesToBase64(signature)
 }
 
 export function isEd25519KeyPair(
@@ -42,6 +37,30 @@ export function isEd25519KeyPair(
 
 function isEd25519Key(key: JsonWebKey | null) {
   return key?.kty === 'OKP' && key.crv === 'Ed25519'
+}
+
+function createEd25519PublicJwk(publicKey: Uint8Array): JsonWebKey {
+  return {
+    kty: 'OKP',
+    crv: 'Ed25519',
+    x: bytesToBase64Url(publicKey),
+    ext: true,
+    key_ops: ['verify'],
+  }
+}
+
+function createEd25519PrivateJwk(secretKey: Uint8Array, publicKey: Uint8Array): JsonWebKey {
+  return {
+    ...createEd25519PublicJwk(publicKey),
+    d: bytesToBase64Url(secretKey),
+    key_ops: ['sign'],
+  }
+}
+
+function privateJwkToEd25519SecretKey(privateKeyJwk: JsonWebKey) {
+  if (!isEd25519Key(privateKeyJwk)) throw new Error('Invalid Ed25519 private key')
+  if (typeof privateKeyJwk.d !== 'string') throw new Error('Invalid Ed25519 private key')
+  return base64UrlToBytes(privateKeyJwk.d)
 }
 
 export function stableStringify(value: unknown): string {
@@ -57,11 +76,14 @@ export function stableStringify(value: unknown): string {
     .join(',')}}`
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer)
+function bytesToBase64(bytes: Uint8Array) {
   let binary = ''
   for (const byte of bytes) binary += String.fromCharCode(byte)
   return btoa(binary)
+}
+
+function bytesToBase64Url(bytes: Uint8Array) {
+  return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
 function base64UrlToBytes(value: string) {

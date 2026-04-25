@@ -13,6 +13,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.10",
     "@heroicons/react": "^2.2.0",
+    "@noble/ed25519": "^3.1.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
     "react": "^19.2.5",
