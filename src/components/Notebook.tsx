@@ -1,20 +1,21 @@
 import {
   CheckIcon,
   ListBulletIcon,
-  MinusIcon,
   MicrophoneIcon,
   NumberedListIcon,
-  PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
-import type { KeyboardEvent, RefObject } from 'react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { LaborLogEntry } from '../interfaces'
 import { markdownListItems } from '../lib/markdown/listRendering'
+import { nextListPrefix, insertAtCursor } from '../lib/notebook/textEditing'
+import { durationLabel, type ListStyle } from '../lib/recording/recordFormatting'
 import { cn } from '../lib/styles/cn'
+import { DurationRow } from './notebook/DurationRow'
+import { EditableLogItem } from './notebook/EditableLogItem'
+import { useAutoGrowTextarea } from './notebook/useAutoGrowTextarea'
 import { RadioSwitch } from './RadioSwitch'
-
-type ListStyle = 'unordered' | 'ordered'
 
 const listStyleOptions = [
   { value: 'unordered', label: '无序列表', icon: ListBulletIcon },
@@ -34,117 +35,6 @@ interface SpeechRecognitionLike {
 interface SpeechWindow extends Window {
   SpeechRecognition?: new () => SpeechRecognitionLike
   webkitSpeechRecognition?: new () => SpeechRecognitionLike
-}
-
-function durationLabel(hours: number) {
-  return `${Number(hours.toFixed(1))}h`
-}
-
-function nextListPrefix(text: string, listStyle: ListStyle) {
-  const lines = text.split('\n')
-  const currentLine = lines.at(-1) ?? ''
-  const indent = currentLine.match(/^\s*/)?.[0] ?? ''
-  if (listStyle === 'unordered') return `${indent}- `
-
-  const numberMatch = currentLine.match(/^\s*(\d+)[.)]\s+/)
-  const nextNumber = numberMatch ? Number(numberMatch[1]) + 1 : lines.length + 1
-  return `${indent}${nextNumber}. `
-}
-
-function insertAtCursor(
-  value: string,
-  insert: string,
-  start: number,
-  end: number
-) {
-  return `${value.slice(0, start)}${insert}${value.slice(end)}`
-}
-
-function useAutoGrowTextarea(
-  ref: RefObject<HTMLTextAreaElement | null>,
-  value: string
-) {
-  useLayoutEffect(() => {
-    const input = ref.current
-    if (!input) return
-    input.style.height = '0px'
-    input.style.height = `${Math.max(32, input.scrollHeight)}px`
-  }, [ref, value])
-}
-
-function AutoGrowTextarea({
-  value,
-  className,
-  placeholder,
-  onChange,
-  onKeyDown,
-  onFocus,
-  onBlur,
-}: {
-  value: string
-  className?: string
-  placeholder?: string
-  onChange: (value: string) => void
-  onKeyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => void
-  onFocus?: () => void
-  onBlur?: () => void
-}) {
-  const ref = useRef<HTMLTextAreaElement | null>(null)
-  useAutoGrowTextarea(ref, value)
-
-  return (
-    <textarea
-      ref={ref}
-      className={cn('notebook-input', className)}
-      placeholder={placeholder}
-      rows={1}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      onKeyDown={onKeyDown}
-      onFocus={onFocus}
-      onBlur={onBlur}
-    />
-  )
-}
-
-function EditableLogItem({
-  log,
-  onUpdate,
-  onRemove,
-}: {
-  log: LaborLogEntry
-  onUpdate: (id: string, text: string) => void
-  onRemove: (id: string) => void
-}) {
-  const [focused, setFocused] = useState(false)
-
-  return (
-    <li className="group pl-1">
-      <div className="grid grid-cols-[1fr_auto] items-start gap-2">
-        <AutoGrowTextarea
-          className="pr-2"
-          value={log.text}
-          onChange={(value) => onUpdate(log.id, value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => {
-            window.setTimeout(() => setFocused(false), 120)
-          }}
-        />
-        <button
-          className={cn(
-            'inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition hover:bg-red-50',
-            focused ? 'opacity-100' : 'opacity-0'
-          )}
-          type="button"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => onRemove(log.id)}
-          aria-label="删除日志"
-        >
-          <TrashIcon className="h-4 w-4" />
-        </button>
-      </div>
-    </li>
-  )
 }
 
 export function Notebook({
@@ -270,21 +160,7 @@ export function Notebook({
                   onRemove={onRemove}
                 />
               ) : (
-                <li key={log.id} className="group pl-1">
-                  <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <p className="whitespace-pre-wrap">
-                      {markdownListItems(log.text).join('\n')}
-                    </p>
-                    <button
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 opacity-70 transition hover:bg-red-50"
-                      type="button"
-                      onClick={() => onRemove(log.id)}
-                      aria-label="删除日志"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
+                <ReadOnlyLogItem key={log.id} log={log} onRemove={onRemove} />
               )
             )}
           </LogList>
@@ -323,53 +199,42 @@ export function Notebook({
             <CheckIcon className="h-5 w-5" />
           </button>
         </div>
-        {shownDuration && (
-          <ul className="list-disc pl-5 text-sm text-stone-700">
-            <li className="pl-1 leading-8">
-              <div className="flex h-8 items-center justify-between gap-3 overflow-hidden">
-                <span className="inline-flex h-8 min-w-0 items-center">
-                  用时{' '}
-                  {onDecreaseDuration ? (
-                    <button
-                      className="mx-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-500 transition hover:bg-stone-100 hover:text-stone-950"
-                      type="button"
-                      onClick={onDecreaseDuration}
-                      aria-label="减少用时"
-                    >
-                      <MinusIcon className="h-5 w-5" />
-                    </button>
-                  ) : (
-                    <span className="mx-1 inline-flex h-8 w-8" aria-hidden />
-                  )}
-                  <span className="inline-flex h-8 min-w-13 items-center justify-center leading-8">
-                    {shownDuration}
-                  </span>
-                  {onIncreaseDuration ? (
-                    <button
-                      className="mx-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-500 transition hover:bg-stone-100 hover:text-stone-950"
-                      type="button"
-                      onClick={onIncreaseDuration}
-                      aria-label="增加用时"
-                    >
-                      <PlusIcon className="h-5 w-5" />
-                    </button>
-                  ) : (
-                    <span className="mx-1 inline-flex h-8 w-8" aria-hidden />
-                  )}
-                </span>
-                {durationMetaText && (
-                  <span className="shrink-0 text-xs leading-8 text-stone-400">
-                    {durationMetaText}
-                  </span>
-                )}
-              </div>
-            </li>
-          </ul>
-        )}
+        <DurationRow
+          duration={shownDuration}
+          metaText={durationMetaText}
+          onDecrease={onDecreaseDuration}
+          onIncrease={onIncreaseDuration}
+        />
         <p className="text-xs text-stone-400">
           Shift + Enter 确认，Enter 换行
         </p>
       </div>
     </section>
+  )
+}
+
+function ReadOnlyLogItem({
+  log,
+  onRemove,
+}: {
+  log: LaborLogEntry
+  onRemove: (id: string) => void
+}) {
+  return (
+    <li className="group pl-1">
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <p className="whitespace-pre-wrap">
+          {markdownListItems(log.text).join('\n')}
+        </p>
+        <button
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 opacity-70 transition hover:bg-red-50"
+          type="button"
+          onClick={() => onRemove(log.id)}
+          aria-label="删除日志"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      </div>
+    </li>
   )
 }
