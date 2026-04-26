@@ -35,15 +35,7 @@ export const useRecordingStore = create<RecordingState>()(
   persist(
     (set, get) => ({
       ...createEmptyDraft(),
-      setMode: (mode) =>
-        set({
-          mode,
-          status: 'idle',
-          startAt: null,
-          endAt: null,
-          pausedAt: null,
-          pausedSeconds: 0,
-        }),
+      setMode: (mode) => set({ mode }),
       startTimer: () =>
         set({
           status: 'running',
@@ -122,7 +114,7 @@ export const useRecordingStore = create<RecordingState>()(
       setManualDuration: (manualDurationHours) =>
         set({
           manualDurationHours: Math.max(
-            0.5,
+            0,
             Math.round(manualDurationHours * 2) / 2
           ),
         }),

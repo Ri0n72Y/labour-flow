@@ -6,22 +6,40 @@ import type { ChangeEvent } from 'react'
 import { useState } from 'react'
 import { GitHubIcon } from '../components/icons/GitHubIcon'
 import { KeyIcon } from '../components/icons/KeyIcon'
+import { BadgeList } from '../components/profile/BadgeList'
+import { LabourHeatmap } from '../components/profile/LabourHeatmap'
+import { UserStatsCards } from '../components/profile/UserStatsCards'
+import { ProjectCard } from '../components/project/ProjectCard'
+import { useLabourStore } from '../store/useLabourStore'
 import { useLaborStore } from '../stores/laborStore'
 import { useUserStore } from '../stores/userStore'
 import { isEd25519KeyPair, publicKeyLabel } from '../utils/crypto'
 import { formatDate } from '../utils/time'
 
-export function UserPage() {
+export function UserPage({
+  onOpenProject,
+}: {
+  onOpenProject?: (projectId: string) => void
+}) {
   const user = useUserStore()
-  const records = useLaborStore((state) => state.records)
+  const signedRecords = useLaborStore((state) => state.records)
   const exportJson = useLaborStore((state) => state.exportJson)
+  const userProfile = useLabourStore((state) => state.userProfile)
+  const projects = useLabourStore((state) => state.projects)
+  const records = useLabourStore((state) => state.labourRecords)
+  const badges = useLabourStore((state) => state.badges)
+  const updateUserProfile = useLabourStore((state) => state.updateUserProfile)
+  const computeUserStats = useLabourStore((state) => state.computeUserStats)
+  const computeProjectStats = useLabourStore((state) => state.computeProjectStats)
   const [uidDraft, setUidDraft] = useState(user.uid)
   const [keyMessage, setKeyMessage] = useState('')
   const [profileMessage, setProfileMessage] = useState('')
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
-  const displayId = `${user.uid || 'worker'}#${publicKeyLabel(user.publicKeyJwk)}`
-  const cleanUidDraft = uidDraft.trim() || 'worker'
+  const displayId = `${user.uid || '劳动者'}#${publicKeyLabel(user.publicKeyJwk)}`
+  const cleanUidDraft = uidDraft.trim() || '劳动者'
   const uidChanged = cleanUidDraft !== user.uid
+  const stats = computeUserStats()
+  const currentProjects = projects.filter((project) => !project.isArchived).slice(0, 3)
 
   const handleAvatar = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -34,6 +52,7 @@ export function UserPage() {
   const handleSaveUid = () => {
     user.setUid(uidDraft)
     setUidDraft(cleanUidDraft)
+    updateUserProfile({ displayName: cleanUidDraft })
     setProfileMessage('名称已保存，完整身份已更新。')
   }
 
@@ -46,7 +65,7 @@ export function UserPage() {
       setKeyMessage(
         error instanceof Error
           ? error.message
-          : '密钥生成失败，请确认正在使用 HTTPS。'
+          : '密钥生成失败，请确认正在使用安全上下文。',
       )
     }
   }
@@ -74,8 +93,7 @@ export function UserPage() {
         <section className="rounded-md border border-amber-200 bg-amber-50 p-4 shadow-sm">
           <p className="text-sm font-semibold text-amber-900">还没有完成注册</p>
           <p className="mt-1 text-sm text-amber-800">
-            生成密钥后，LabourFlow
-            才能为劳动记录签名并确认记录属于你。你可以点击右上角“注册”快捷完成。
+            生成密钥后，劳动流才能为劳动记录签名并确认记录属于你。
           </p>
         </section>
       )}
@@ -127,11 +145,28 @@ export function UserPage() {
           </div>
         </div>
         <div className="mt-4 rounded-md bg-stone-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
-            完整身份
-          </p>
+          <p className="text-xs font-semibold text-stone-500">完整身份</p>
           <p className="mt-1 break-all text-sm text-stone-950">{displayId}</p>
         </div>
+        <label className="mt-3 block text-sm font-medium text-stone-700">
+          主要方向
+          <input
+            className="input mt-1"
+            value={userProfile.mainDirection ?? ''}
+            onChange={(event) =>
+              updateUserProfile({ mainDirection: event.target.value })
+            }
+          />
+        </label>
+        <label className="mt-3 block text-sm font-medium text-stone-700">
+          对外说明
+          <textarea
+            className="input mt-1 min-h-20 resize-y"
+            value={userProfile.bio ?? ''}
+            placeholder="写一句对外展示的劳动说明"
+            onChange={(event) => updateUserProfile({ bio: event.target.value })}
+          />
+        </label>
       </section>
 
       <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
@@ -154,10 +189,27 @@ export function UserPage() {
         )}
       </section>
 
+      <UserStatsCards stats={stats} />
+      <LabourHeatmap labourRecords={records} />
+
+      <section className="space-y-3">
+        <h2 className="px-1 text-base font-semibold text-stone-950">当前项目与最近进展</h2>
+        {currentProjects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            stats={computeProjectStats(project.id)}
+            onOpen={() => onOpenProject?.(project.id)}
+          />
+        ))}
+      </section>
+
+      <BadgeList badges={badges} />
+
       <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold text-stone-950">数据导出</h2>
         <p className="mt-2 text-sm text-stone-500">
-          当前共有 {records.length} 条已签名劳动记录。
+          当前共有 {signedRecords.length} 条已签名劳动记录。
         </p>
         <button
           className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-stone-950 px-4 text-sm font-semibold text-white"

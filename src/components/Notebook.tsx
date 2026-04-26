@@ -1,6 +1,26 @@
-import { CheckIcon, MicrophoneIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import {
+  CheckIcon,
+  ListBulletIcon,
+  MicrophoneIcon,
+  NumberedListIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline'
+import type { KeyboardEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { LaborLogEntry } from '../interfaces'
+import { markdownListItems } from '../lib/markdown/listRendering'
+import { nextListPrefix, insertAtCursor } from '../lib/notebook/textEditing'
+import { durationLabel, type ListStyle } from '../lib/recording/recordFormatting'
+import { cn } from '../lib/styles/cn'
+import { DurationRow } from './notebook/DurationRow'
+import { EditableLogItem } from './notebook/EditableLogItem'
+import { useAutoGrowTextarea } from './notebook/useAutoGrowTextarea'
+import { RadioSwitch } from './RadioSwitch'
+
+const listStyleOptions = [
+  { value: 'unordered', label: '无序列表', icon: ListBulletIcon },
+  { value: 'ordered', label: '有序列表', icon: NumberedListIcon },
+] as const
 
 interface SpeechRecognitionLike {
   lang: string
@@ -20,19 +40,43 @@ interface SpeechWindow extends Window {
 export function Notebook({
   activeText,
   logs,
+  listStyle = 'unordered',
+  durationHours,
+  durationText,
+  durationMetaText,
   onChangeActive,
   onCommit,
   onUpdate,
   onRemove,
+  onListStyleChange,
+  onDecreaseDuration,
+  onIncreaseDuration,
 }: {
   activeText: string
   logs: LaborLogEntry[]
+  listStyle?: ListStyle
+  durationHours?: number
+  durationText?: string
+  durationMetaText?: string
   onChangeActive: (value: string) => void
   onCommit: () => void
-  onUpdate: (id: string, text: string) => void
+  onUpdate?: (id: string, text: string) => void
   onRemove: (id: string) => void
+  onListStyleChange?: (style: ListStyle) => void
+  onDecreaseDuration?: () => void
+  onIncreaseDuration?: () => void
 }) {
   const [speechActive, setSpeechActive] = useState(false)
+  const activeInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const LogList = listStyle === 'ordered' ? 'ol' : 'ul'
+  const shownDuration =
+    durationText ??
+    (typeof durationHours === 'number' ? durationLabel(durationHours) : '')
+  useAutoGrowTextarea(activeInputRef, activeText)
+
+  useEffect(() => {
+    activeInputRef.current?.focus()
+  }, [])
 
   const startSpeech = () => {
     const speechWindow = window as SpeechWindow
@@ -46,68 +90,151 @@ export function Notebook({
       const transcript = event.results[0]?.[0]?.transcript ?? ''
       onChangeActive(`${activeText}${activeText ? ' ' : ''}${transcript}`)
       setSpeechActive(false)
+      activeInputRef.current?.focus()
     }
-    recognition.onerror = () => setSpeechActive(false)
+    recognition.onerror = () => {
+      setSpeechActive(false)
+      activeInputRef.current?.focus()
+    }
     setSpeechActive(true)
     recognition.start()
   }
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter') return
+    if (event.shiftKey) {
+      event.preventDefault()
+      onCommit()
+      window.requestAnimationFrame(() => activeInputRef.current?.focus())
+      return
+    }
+
+    event.preventDefault()
+    const input = event.currentTarget
+    const prefix = nextListPrefix(
+      activeText.slice(0, input.selectionStart),
+      listStyle
+    )
+    const insert = `\n${prefix}`
+    const nextValue = insertAtCursor(
+      activeText,
+      insert,
+      input.selectionStart,
+      input.selectionEnd
+    )
+    const nextCursor = input.selectionStart + insert.length
+    onChangeActive(nextValue)
+    window.requestAnimationFrame(() => {
+      input.selectionStart = nextCursor
+      input.selectionEnd = nextCursor
+    })
+  }
+
   return (
-    <section className="rounded-md border border-amber-200 bg-[#fffaf0] p-4 text-left shadow-sm">
-      <h2 className="mb-3 text-base font-semibold text-stone-950">劳动日志</h2>
+    <section className="notebook-paper rounded-md border border-amber-200 p-4 text-left shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-stone-950">劳动日志</h2>
+        {onListStyleChange && (
+          <RadioSwitch
+            ariaLabel="列表风格"
+            options={listStyleOptions}
+            value={listStyle}
+            onChange={onListStyleChange}
+          />
+        )}
+      </div>
       <div className="space-y-3">
-        {logs.map((log, index) => (
-          <div
-            key={log.id}
-            className="grid grid-cols-[auto_1fr_auto] gap-2 border-b border-dashed border-amber-200 pb-2"
+        {logs.length > 0 && (
+          <LogList
+            className={cn(
+              'space-y-2 border-b border-dashed border-amber-200 pb-3 pl-5 text-sm leading-8 text-stone-800',
+              listStyle === 'ordered' ? 'list-decimal' : 'list-disc'
+            )}
           >
-            <span className="mt-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-700 text-xs text-white">
-              {index + 1}
-            </span>
-            <textarea
-              className="notebook-input"
-              value={log.text}
-              rows={2}
-              onChange={(event) => onUpdate(log.id, event.target.value)}
-            />
-            <button
-              className="icon-button bg-white text-red-500"
-              type="button"
-              onClick={() => onRemove(log.id)}
-              aria-label="删除日志"
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-        <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+            {logs.map((log) =>
+              onUpdate ? (
+                <EditableLogItem
+                  key={log.id}
+                  log={log}
+                  onUpdate={onUpdate}
+                  onRemove={onRemove}
+                />
+              ) : (
+                <ReadOnlyLogItem key={log.id} log={log} onRemove={onRemove} />
+              )
+            )}
+          </LogList>
+        )}
+        <div className="grid grid-cols-[1fr_auto_auto] items-start gap-2">
           <textarea
-            className="notebook-input"
+            ref={activeInputRef}
+            className="notebook-input notebook-active-input"
             placeholder="记录刚完成的一小步劳动..."
-            rows={3}
+            rows={1}
             value={activeText}
             onChange={(event) => onChangeActive(event.target.value)}
+            onKeyDown={handleKeyDown}
           />
           <button
-            className="icon-button bg-white text-teal-700"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-teal-700 transition hover:bg-teal-50"
             type="button"
             onClick={startSpeech}
             aria-label="语音输入"
           >
             <MicrophoneIcon
-              className={`h-5 w-5 ${speechActive ? 'text-red-500' : ''}`}
+              className={cn('h-5 w-5', speechActive && 'text-red-500')}
             />
           </button>
           <button
-            className="icon-button bg-teal-700 text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-teal-700 transition hover:bg-teal-50"
             type="button"
-            onClick={onCommit}
-            aria-label="保存日志"
+            onClick={() => {
+              onCommit()
+              window.requestAnimationFrame(() =>
+                activeInputRef.current?.focus()
+              )
+            }}
+            aria-label="确认日志"
           >
             <CheckIcon className="h-5 w-5" />
           </button>
         </div>
+        <DurationRow
+          duration={shownDuration}
+          metaText={durationMetaText}
+          onDecrease={onDecreaseDuration}
+          onIncrease={onIncreaseDuration}
+        />
+        <p className="text-xs text-stone-400">
+          Shift + Enter 确认，Enter 换行
+        </p>
       </div>
     </section>
+  )
+}
+
+function ReadOnlyLogItem({
+  log,
+  onRemove,
+}: {
+  log: LaborLogEntry
+  onRemove: (id: string) => void
+}) {
+  return (
+    <li className="group pl-1">
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <p className="whitespace-pre-wrap">
+          {markdownListItems(log.text).join('\n')}
+        </p>
+        <button
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 opacity-70 transition hover:bg-red-50"
+          type="button"
+          onClick={() => onRemove(log.id)}
+          aria-label="删除日志"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      </div>
+    </li>
   )
 }

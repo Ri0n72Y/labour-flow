@@ -2,6 +2,7 @@ import { Switch } from '@headlessui/react'
 import ReactECharts from 'echarts-for-react'
 import { useMemo, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
+import { MarkdownList } from '../components/MarkdownList'
 import type { ViewPeriod } from '../interfaces'
 import { useLaborStore } from '../stores/laborStore'
 import { getRecordTitle } from '../utils/record'
@@ -23,22 +24,23 @@ export function ViewPage() {
       const key = groupKey(record.startAt, period)
       totals.set(
         key,
-        (totals.get(key) ?? 0) + getDurationSeconds(record) / 3600
+        (totals.get(key) ?? 0) + getDurationSeconds(record) / 3600,
       )
     }
     return Array.from(totals.entries()).sort(([left], [right]) =>
-      left.localeCompare(right)
+      left.localeCompare(right),
     )
   }, [period, records])
 
   const tagTotals = useMemo(() => {
     const totals = new Map<string, number>()
     for (const record of records) {
-      for (const tag of record.tags)
+      for (const tag of record.tags) {
         totals.set(
           tag,
-          (totals.get(tag) ?? 0) + getDurationSeconds(record) / 3600
+          (totals.get(tag) ?? 0) + getDurationSeconds(record) / 3600,
         )
+      }
     }
     return Array.from(totals.entries()).map(([name, value]) => ({
       name,
@@ -82,7 +84,7 @@ export function ViewPage() {
             {showCharts ? '图表模式' : '记录模式'}
           </p>
           <p className="mt-0.5 text-xs text-stone-500">
-            {showCharts ? '查看劳动统计' : '查看记录明细'}
+            {showCharts ? '查看劳动统计' : '查看签名记录明细'}
           </p>
         </div>
         <Switch
@@ -122,9 +124,9 @@ export function ViewPage() {
           </section>
 
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-stone-950">Tag 分布</h2>
+            <h2 className="text-base font-semibold text-stone-950">标签分布</h2>
             {tagTotals.length === 0 ? (
-              <p className="mt-4 text-sm text-stone-400">暂无 tag 数据</p>
+              <p className="mt-4 text-sm text-stone-400">暂无标签数据</p>
             ) : (
               <ReactECharts className="h-56" option={pieOption} />
             )}
@@ -152,9 +154,9 @@ export function ViewPage() {
                   已签名
                 </span>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-stone-700">
-                {record.description}
-              </p>
+              <div className="mt-3">
+                <MarkdownList text={record.description} />
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {record.tags.map((tag) => (
                   <span
