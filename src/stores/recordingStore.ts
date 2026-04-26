@@ -4,7 +4,7 @@ import type { LaborDraft, RecordMode } from '../interfaces'
 import { nowIso } from '../utils/time'
 
 const createEmptyDraft = (): LaborDraft => ({
-  mode: 'timer',
+  mode: 'manual',
   status: 'idle',
   startAt: null,
   endAt: null,
@@ -35,15 +35,7 @@ export const useRecordingStore = create<RecordingState>()(
   persist(
     (set, get) => ({
       ...createEmptyDraft(),
-      setMode: (mode) =>
-        set({
-          mode,
-          status: 'idle',
-          startAt: null,
-          endAt: null,
-          pausedAt: null,
-          pausedSeconds: 0,
-        }),
+      setMode: (mode) => set({ mode }),
       startTimer: () =>
         set({
           status: 'running',
@@ -63,14 +55,18 @@ export const useRecordingStore = create<RecordingState>()(
           status: 'running',
           pausedAt: null,
           pausedSeconds:
-            pausedSeconds + Math.max(0, Math.round((Date.now() - Date.parse(pausedAt)) / 1000)),
+            pausedSeconds +
+            Math.max(0, Math.round((Date.now() - Date.parse(pausedAt)) / 1000)),
         })
       },
       stopTimer: () => {
         const { status, pausedAt, pausedSeconds } = get()
         const extraPausedSeconds =
           status === 'paused' && pausedAt
-            ? Math.max(0, Math.round((Date.now() - Date.parse(pausedAt)) / 1000))
+            ? Math.max(
+                0,
+                Math.round((Date.now() - Date.parse(pausedAt)) / 1000)
+              )
             : 0
         set({
           status: 'stopped',
@@ -98,7 +94,9 @@ export const useRecordingStore = create<RecordingState>()(
       },
       updateLog: (id, text) =>
         set((state) => ({
-          logs: state.logs.map((log) => (log.id === id ? { ...log, text } : log)),
+          logs: state.logs.map((log) =>
+            log.id === id ? { ...log, text } : log
+          ),
         })),
       removeLog: (id) =>
         set((state) => ({
@@ -114,11 +112,16 @@ export const useRecordingStore = create<RecordingState>()(
         }))
       },
       setManualDuration: (manualDurationHours) =>
-        set({ manualDurationHours: Math.max(0.5, Math.round(manualDurationHours * 2) / 2) }),
+        set({
+          manualDurationHours: Math.max(
+            0,
+            Math.round(manualDurationHours * 2) / 2
+          ),
+        }),
       resetDraft: () => set(createEmptyDraft()),
     }),
     {
       name: 'labourflow-recording',
-    },
-  ),
+    }
+  )
 )
