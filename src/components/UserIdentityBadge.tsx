@@ -8,12 +8,12 @@ export function UserIdentityBadge() {
   const publicKeyJwk = useUserStore((state) => state.publicKeyJwk)
   const privateKeyJwk = useUserStore((state) => state.privateKeyJwk)
   const hasKeys = isEd25519KeyPair(publicKeyJwk, privateKeyJwk)
-  const displayId = `${uid || 'worker'}#${publicKeyLabel(publicKeyJwk)}`
+  const displayId = `${uid || '劳动者'}#${publicKeyLabel(publicKeyJwk)}`
 
   if (!hasKeys) {
     return (
       <div
-        className="flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-xs text-black-500 ring-1 opacity-20"
+        className="flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-xs text-stone-500 ring-1 ring-stone-200 opacity-70"
         title="未注册"
       >
         <UserCircleIcon className="h-5 w-5" />

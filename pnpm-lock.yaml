@@ -17,6 +17,9 @@ importers:
       '@noble/ed25519':
         specifier: ^3.1.0
         version: 3.1.0
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       echarts:
         specifier: ^6.0.0
         version: 6.0.0
@@ -81,6 +84,9 @@ importers:
       globals:
         specifier: ^17.5.0
         version: 17.5.0
+      ignore:
+        specifier: ^7.0.5
+        version: 7.0.5
       prettier:
         specifier: ^3.8.3
         version: 3.8.3
