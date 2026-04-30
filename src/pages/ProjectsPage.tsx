@@ -12,7 +12,9 @@ export function ProjectsPage({
   const createProject = useLabourStore((state) => state.createProject)
   const updateProject = useLabourStore((state) => state.updateProject)
   const archiveProject = useLabourStore((state) => state.archiveProject)
-  const computeProjectStats = useLabourStore((state) => state.computeProjectStats)
+  const computeProjectStats = useLabourStore(
+    (state) => state.computeProjectStats
+  )
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const handleCreate = () => {
@@ -44,7 +46,9 @@ export function ProjectsPage({
             <input
               className="input"
               value={project.title}
-              onChange={(event) => updateProject(project.id, { title: event.target.value })}
+              onChange={(event) =>
+                updateProject(project.id, { title: event.target.value })
+              }
             />
             <textarea
               className="input mt-3 min-h-20 resize-y"
@@ -123,10 +127,10 @@ export function ProjectsPage({
               type="button"
               onClick={() => setEditingId(project.id)}
             >
-              编辑方向 / 假设 / 待办池
+              编辑项目
             </button>
           </div>
-        ),
+        )
       )}
     </div>
   )

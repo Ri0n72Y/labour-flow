@@ -7,7 +7,6 @@ import { RegistrationGate } from '../components/record/RegistrationGate'
 import { TagNotebook } from '../components/record/TagNotebook'
 import type { LaborData } from '../interfaces'
 import { todayKey } from '../lib/date'
-import { markdownListItems } from '../lib/markdown/listRendering'
 import {
   clampDuration,
   descriptionFromLogs,
@@ -184,8 +183,6 @@ export function RecordPage() {
         date: todayKey(),
         content: description,
         durationMinutes: Math.round(duration / 60),
-        reflection: undefined,
-        progressNote: markdownListItems(description)[0] ?? description,
       })
       recording.resetDraft()
       setTagInput('')

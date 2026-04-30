@@ -25,9 +25,7 @@ export interface LabourRecord {
   projectId: string
   date: string
   content: string
-  reflection?: string
   durationMinutes: number
-  progressNote?: string
   createdAt: string
   updatedAt: string
 }
