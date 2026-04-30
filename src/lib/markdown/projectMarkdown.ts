@@ -6,6 +6,8 @@ import type {
   WeeklySnapshot,
 } from '../../types/domain'
 import { getWeekRange } from '../date'
+/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
+// @ts-ignore Vite resolves this raw import at build time.
 import projectMarkdownTemplateSource from './template.md?raw'
 
 interface ExportProjectMarkdownOptions {
