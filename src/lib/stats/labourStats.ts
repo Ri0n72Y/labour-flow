@@ -1,4 +1,9 @@
-import type { Badge, LabourRecord, Project, WeeklySnapshot } from '../../types/domain'
+import type {
+  Badge,
+  LabourRecord,
+  Project,
+  WeeklySnapshot,
+} from '../../types/domain'
 import { addDays, getWeekRange, todayKey } from '../date'
 
 export interface DailyActivity {
@@ -20,7 +25,7 @@ export function getDailyActivity(records: LabourRecord[]) {
     activity.set(record.date, current)
   }
   return Array.from(activity.values()).sort((left, right) =>
-    left.date.localeCompare(right.date),
+    left.date.localeCompare(right.date)
   )
 }
 
@@ -41,7 +46,7 @@ export function getActiveDaysInRange(records: LabourRecord[], days: number) {
   return new Set(
     records
       .filter((record) => record.date >= start && record.date <= end)
-      .map((record) => record.date),
+      .map((record) => record.date)
   ).size
 }
 
@@ -51,18 +56,18 @@ export function getTotalDuration(records: LabourRecord[]) {
 
 export function getProjectRecentProgress(
   project: Project,
-  records: LabourRecord[],
+  records: LabourRecord[]
 ) {
   const latest = records
     .filter((record) => record.projectId === project.id)
     .toSorted((left, right) => right.date.localeCompare(left.date))[0]
-  return latest?.progressNote || latest?.content || '还没有记录最近进展'
+  return latest?.content || '还没有记录最近进展'
 }
 
 export function getWeeklyDuration(
   records: LabourRecord[],
   weekStart: string,
-  weekEnd: string,
+  weekEnd: string
 ) {
   return records
     .filter((record) => record.date >= weekStart && record.date <= weekEnd)
@@ -71,7 +76,7 @@ export function getWeeklyDuration(
 
 export function deriveBadges(
   records: LabourRecord[],
-  weeklySnapshots: WeeklySnapshot[],
+  weeklySnapshots: WeeklySnapshot[]
 ) {
   const earnedAt = new Date().toISOString()
   const badges: Badge[] = []
@@ -107,7 +112,7 @@ export function deriveBadges(
   for (const record of records) {
     durationByProject.set(
       record.projectId,
-      (durationByProject.get(record.projectId) ?? 0) + record.durationMinutes,
+      (durationByProject.get(record.projectId) ?? 0) + record.durationMinutes
     )
   }
   if ([...durationByProject.values()].some((minutes) => minutes >= 20 * 60)) {

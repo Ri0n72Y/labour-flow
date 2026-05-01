@@ -8,12 +8,15 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:markdown": "node scripts/test-project-markdown.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.10",
     "@heroicons/react": "^2.2.0",
     "@noble/ed25519": "^3.1.0",
+    "@noble/hashes": "^2.2.0",
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
@@ -27,7 +30,11 @@
     "@eslint/js": "^10.0.1",
     "@rolldown/plugin-babel": "^0.2.3",
     "@tailwindcss/vite": "^4.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/babel__core": "^7.20.5",
+    "@types/jsdom": "^28.0.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -39,10 +46,12 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
     "ignore": "^7.0.5",
+    "jsdom": "^29.1.1",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
   }
 }

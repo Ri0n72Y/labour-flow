@@ -1,10 +1,14 @@
 import * as ed25519 from '@noble/ed25519'
+import { sha512 } from '@noble/hashes/sha2.js'
 import type { LaborData } from '../interfaces'
 
 const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
+ed25519.hashes.sha512 = sha512
+ed25519.hashes.sha512Async = async (message: Uint8Array) => sha512(message)
+
 export async function generateIdentityKeys() {
-  const { secretKey, publicKey } = await ed25519.keygenAsync()
+  const { secretKey, publicKey } = ed25519.keygen()
   const publicKeyJwk = createEd25519PublicJwk(publicKey)
   const privateKeyJwk = createEd25519PrivateJwk(secretKey, publicKey)
 
@@ -24,7 +28,7 @@ export function publicKeyPayload(publicKeyJwk: JsonWebKey | null) {
 export async function signLaborRecord(record: Omit<LaborData, 'signature'>, privateKeyJwk: JsonWebKey) {
   const data = new TextEncoder().encode(stableStringify(record))
   const secretKey = privateJwkToEd25519SecretKey(privateKeyJwk)
-  const signature = await ed25519.signAsync(data, secretKey)
+  const signature = ed25519.sign(data, secretKey)
   return bytesToBase64(signature)
 }
 
