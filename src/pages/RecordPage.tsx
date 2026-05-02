@@ -40,10 +40,6 @@ export function RecordPage() {
     () => projects.filter((project) => !project.isArchived),
     [projects]
   )
-  const projectById = useMemo(
-    () => new Map(projects.map((project) => [project.id, project])),
-    [projects]
-  )
   const latestProjectId = labourRecords.find((record) =>
     activeProjects.some((project) => project.id === record.projectId)
   )?.projectId
@@ -73,7 +69,6 @@ export function RecordPage() {
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
   const hasTimerDraft = Boolean(recording.startAt) || recording.status !== 'idle'
   const selectedProjectId = projectId || fallbackProjectId
-  const selectedProject = projectById.get(selectedProjectId)
   const canSign =
     hasKeys &&
     (recording.mode === 'manual' || recording.status === 'stopped') &&
@@ -206,10 +201,6 @@ export function RecordPage() {
 
   return (
     <div className="space-y-4">
-      <p className="px-1 text-left text-xs text-stone-400">
-        当前项目：{selectedProject?.title ?? '自动创建'}
-      </p>
-
       <RecordModePill
         mode={recording.mode}
         status={recording.status}
