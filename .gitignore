@@ -28,3 +28,6 @@ dist-ssr
 *.err
 
 project_summary*.md
+
+.temp
+.pnpm-store
