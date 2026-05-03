@@ -10,6 +10,7 @@ import {
   FolderIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/styles/cn'
 import type { Project } from '../../types/domain'
 
@@ -24,16 +25,19 @@ export function ProjectSelector({
   onChange: (projectId: string) => void
   onCreate: () => void
 }) {
+  const { t } = useTranslation()
   const selectedProject = projects.find(
     (project) => project.id === selectedProjectId
   )
-  const selectedProjectTitle = selectedProject?.title ?? '默认劳动项目'
+  const selectedProjectTitle = selectedProject?.title ?? t('record.defaultProject')
 
   return (
     <section className="notebook-paper grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-amber-200 p-3 text-left shadow-sm">
       <div className="contents">
         <FolderIcon className="h-4 w-4 text-teal-700" />
-        <h2 className="text-base font-semibold text-stone-950">项目</h2>
+        <h2 className="text-base font-semibold text-stone-950">
+          {t('record.project')}
+        </h2>
       </div>
       <Listbox value={selectedProjectId} onChange={onChange}>
         <div className="relative min-w-0">
@@ -44,7 +48,7 @@ export function ProjectSelector({
           <ListboxOptions
             anchor="bottom start"
             className="z-20 mt-2 max-h-56 w-(--button-width) overflow-y-auto rounded-md border border-amber-200 bg-white p-1 text-sm shadow-lg outline-none"
-            aria-label="选择项目"
+            aria-label={t('record.projectSelect')}
           >
             {projects.length === 0 && (
               <ListboxOption
@@ -56,7 +60,7 @@ export function ProjectSelector({
                 }
                 value=""
               >
-                <span className="truncate">默认劳动项目</span>
+                <span className="truncate">{t('record.defaultProject')}</span>
                 <CheckIcon className="h-4 w-4 text-teal-700" />
               </ListboxOption>
             )}
@@ -89,7 +93,7 @@ export function ProjectSelector({
         className="inline-flex h-9 w-9 items-center justify-center rounded-md text-teal-700 transition hover:bg-teal-50"
         type="button"
         onClick={onCreate}
-        aria-label="新建项目"
+        aria-label={t('record.newProject')}
       >
         <PlusIcon className="h-5 w-5" />
       </button>

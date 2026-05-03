@@ -1,6 +1,7 @@
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function TagPicker({
   open,
@@ -15,6 +16,7 @@ export function TagPicker({
   onClose: () => void
   onToggle: (tag: string) => void
 }) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const suggestions = useMemo(() => {
     const defaults = ['写作', '开发', '沟通', '研究', '设计', '维护']
@@ -35,12 +37,12 @@ export function TagPicker({
       <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md p-3">
         <DialogPanel className="rounded-t-lg bg-white p-4 text-left shadow-xl">
           <DialogTitle className="text-lg font-semibold text-stone-950">
-            选择标签
+            {t('tagPicker.title')}
           </DialogTitle>
           <div className="mt-4 flex gap-2">
             <input
               className="input"
-              placeholder="搜索或创建标签"
+              placeholder={t('tagPicker.placeholder')}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -48,7 +50,7 @@ export function TagPicker({
               className="icon-button bg-teal-700 text-white"
               type="button"
               onClick={createTag}
-              aria-label="创建标签"
+              aria-label={t('tagPicker.create')}
             >
               <PlusIcon className="h-5 w-5" />
             </button>

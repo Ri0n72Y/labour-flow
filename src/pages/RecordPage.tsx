@@ -1,5 +1,6 @@
 import { CheckIcon } from '@heroicons/react/24/outline'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Notebook } from '../components/Notebook'
 import { ProjectSelector } from '../components/record/ProjectSelector'
 import { RecordModePill } from '../components/record/RecordModePill'
@@ -28,6 +29,7 @@ import {
 import { createManualRange, nowIso, todayInputValue } from '../utils/time'
 
 export function RecordPage() {
+  const { t } = useTranslation()
   const recording = useRecordingStore()
   const projects = useLabourStore((state) => state.projects)
   const labourRecords = useLabourStore((state) => state.labourRecords)
@@ -97,7 +99,7 @@ export function RecordPage() {
       description: '从一条笔记开始。',
     })
     setProjectId(project.id)
-    setMessage('已切换到新的劳动项目。')
+    setMessage(t('record.messages.createdProject'))
   }
 
   const submitTagInput = () => {
@@ -112,12 +114,12 @@ export function RecordPage() {
     setRegistering(true)
     try {
       await user.generateKeys()
-      setMessage('注册已完成，可以开始记录劳动。')
+      setMessage(t('record.messages.registered'))
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : '注册失败，请确认正在使用安全上下文。'
+          : t('record.messages.registerFailed')
       )
     } finally {
       setRegistering(false)
@@ -127,7 +129,7 @@ export function RecordPage() {
   const handleSign = async () => {
     setMessage('')
     if (!user.privateKeyJwk || !user.publicKeyJwk) {
-      setMessage('请先完成注册并生成本地密钥。')
+      setMessage(t('record.messages.keyRequired'))
       return
     }
 
@@ -140,7 +142,7 @@ export function RecordPage() {
         : { startAt: latest.startAt, endAt: latest.endAt }
 
     if (!range.startAt || !range.endAt || latest.logs.length === 0) {
-      setMessage('请至少写下一条劳动日志。')
+      setMessage(t('record.messages.writeLog'))
       return
     }
 
@@ -155,7 +157,7 @@ export function RecordPage() {
           )
     const description = descriptionFromLogs(latest.logs, listStyle)
     if (!description) {
-      setMessage('请至少写下一条劳动日志。')
+      setMessage(t('record.messages.writeLog'))
       return
     }
 
@@ -182,9 +184,9 @@ export function RecordPage() {
       })
       recording.resetDraft()
       setTagInput('')
-      setMessage('记录已签名保存。')
+      setMessage(t('record.messages.signed'))
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '签名失败，请重试。')
+      setMessage(error instanceof Error ? error.message : t('record.messages.signFailed'))
     } finally {
       setSigning(false)
     }
@@ -273,7 +275,7 @@ export function RecordPage() {
         }}
       >
         <CheckIcon className="h-5 w-5" />
-        {signing ? '签名中' : '完成并签名'}
+        {signing ? t('record.signing') : t('record.finishAndSign')}
       </button>
 
       {message && (

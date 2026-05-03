@@ -5,6 +5,7 @@ import {
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import { type ComponentType, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { UserIdentityBadge } from './components/UserIdentityBadge'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ProjectsPage } from './pages/ProjectsPage'
@@ -16,23 +17,24 @@ type TabId = 'record' | 'view' | 'projects' | 'user'
 
 const tabs: Array<{
   id: TabId
-  label: string
+  labelKey: string
   icon: ComponentType<{ className?: string }>
 }> = [
-  { id: 'record', label: '记录', icon: PencilSquareIcon },
-  { id: 'view', label: '查看', icon: ChartBarIcon },
-  { id: 'projects', label: '项目', icon: FolderIcon },
-  { id: 'user', label: '我的', icon: UserCircleIcon },
+  { id: 'record', labelKey: 'app.tabs.record', icon: PencilSquareIcon },
+  { id: 'view', labelKey: 'app.tabs.view', icon: ChartBarIcon },
+  { id: 'projects', labelKey: 'app.tabs.projects', icon: FolderIcon },
+  { id: 'user', labelKey: 'app.tabs.user', icon: UserCircleIcon },
 ]
 
 const pageTitle: Record<TabId, string> = {
-  record: '快速记录',
-  view: '劳动记录',
-  projects: '项目档案',
-  user: '个人档案',
+  record: 'app.titles.record',
+  view: 'app.titles.view',
+  projects: 'app.titles.projects',
+  user: 'app.titles.user',
 }
 
 function App() {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabId>('record')
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
 
@@ -47,10 +49,10 @@ function App() {
         <header className="flex items-center justify-between gap-3 border-b border-stone-200 px-5 pb-3 pt-5">
           <div className="min-w-0 text-left">
             <p className="text-xs font-semibold uppercase text-teal-700">
-              劳动流 Labour Flow
+              {t('app.brand')}
             </p>
             <h1 className="mt-1 text-2xl font-semibold text-stone-950">
-              {activeProjectId ? '项目详情' : pageTitle[activeTab]}
+              {activeProjectId ? t('app.projectDetail') : t(pageTitle[activeTab])}
             </h1>
           </div>
           <UserIdentityBadge />
@@ -94,7 +96,7 @@ function App() {
                   }}
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="mt-1">{tab.label}</span>
+                  <span className="mt-1">{t(tab.labelKey)}</span>
                 </button>
               )
             })}

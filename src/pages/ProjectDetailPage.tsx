@@ -7,6 +7,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { type ReactNode, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ProjectMarkdownExport } from '../components/project/MarkdownImportExport'
 import { ProjectDocumentPreview } from '../components/project/ProjectDocumentPreview'
 import { PromptEditor } from '../components/prompt/PromptEditor'
@@ -24,10 +25,10 @@ type ProjectSectionId =
   | 'backlog'
 type DetailPanelId = 'archive' | 'activity' | 'data'
 
-const detailPanels: Array<{ id: DetailPanelId; label: string }> = [
-  { id: 'archive', label: '档案' },
-  { id: 'activity', label: '推进' },
-  { id: 'data', label: '数据' },
+const detailPanels: Array<{ id: DetailPanelId; labelKey: string }> = [
+  { id: 'archive', labelKey: 'projectDetail.archive' },
+  { id: 'activity', labelKey: 'projectDetail.activity' },
+  { id: 'data', labelKey: 'projectDetail.data' },
 ]
 
 interface ProjectDraft {
@@ -90,6 +91,8 @@ function EditableProjectSection({
   subtitle?: string
   title: string
 }) {
+  const { t } = useTranslation()
+
   return (
     <section
       className={cn(
@@ -118,9 +121,9 @@ function EditableProjectSection({
           {editing ? (
             <>
               <button
-                aria-label={`保存${title}`}
+                aria-label={t('common.saveSection', { title })}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-teal-700 text-white transition hover:bg-teal-800"
-                title={`保存${title}`}
+                title={t('common.saveSection', { title })}
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
@@ -130,9 +133,9 @@ function EditableProjectSection({
                 <CheckIcon className="h-5 w-5" />
               </button>
               <button
-                aria-label={`放弃${title}`}
+                aria-label={t('common.cancelSection', { title })}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-stone-100 text-stone-600 transition hover:bg-stone-200"
-                title={`放弃${title}`}
+                title={t('common.cancelSection', { title })}
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
@@ -144,9 +147,9 @@ function EditableProjectSection({
             </>
           ) : selected ? (
             <button
-              aria-label={`编辑${title}`}
+              aria-label={t('common.editSection', { title })}
               className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-stone-950 text-white transition hover:bg-stone-800"
-              title={`编辑${title}`}
+              title={t('common.editSection', { title })}
               type="button"
               onClick={(event) => {
                 event.stopPropagation()
@@ -170,6 +173,7 @@ export function ProjectDetailPage({
   projectId: string
   onBack: () => void
 }) {
+  const { t } = useTranslation()
   const project = useLabourStore((state) =>
     state.projects.find((item) => item.id === projectId)
   )
@@ -179,10 +183,10 @@ export function ProjectDetailPage({
       <div className="space-y-4 text-left">
         <button className="small-button" type="button" onClick={onBack}>
           <ArrowLeftIcon className="h-4 w-4" />
-          返回
+          {t('projectDetail.backToProjects')}
         </button>
         <p className="rounded-md bg-white p-4 text-sm text-stone-500">
-          项目不存在。
+          {t('projectDetail.noProject')}
         </p>
       </div>
     )
@@ -200,6 +204,7 @@ function ProjectDetailContent({
   project: Project
   onBack: () => void
 }) {
+  const { t } = useTranslation()
   const projectId = project.id
   const records = useLabourStore((state) => state.labourRecords)
   const weeklyPlans = useLabourStore((state) => state.weeklyPlans)
@@ -330,7 +335,7 @@ function ProjectDetailContent({
         content,
         generatedAt: new Date().toISOString(),
       })
-      setMessage('已生成本地模拟周小结。')
+      setMessage(t('projectDetail.generated'))
     } finally {
       setGenerating(false)
     }
@@ -345,7 +350,7 @@ function ProjectDetailContent({
     <div className="space-y-4 text-left">
       <button className="small-button" type="button" onClick={onBack}>
         <ArrowLeftIcon className="h-4 w-4" />
-        返回项目档案
+        {t('projectDetail.backToProjects')}
       </button>
 
       <div className="grid grid-cols-3 gap-2 rounded-md bg-stone-100 p-1">
@@ -361,7 +366,7 @@ function ProjectDetailContent({
             type="button"
             onClick={() => setActivePanel(panel.id)}
           >
-            {panel.label}
+            {t(panel.labelKey)}
           </button>
         ))}
       </div>
@@ -370,8 +375,8 @@ function ProjectDetailContent({
         <>
           <EditableProjectSection
             id="summary"
-            title="项目概览"
-            subtitle="点击本节后，可编辑标题和说明。"
+            title={t('projectDetail.summary')}
+            subtitle={t('projectDetail.summarySubtitle')}
             onCancel={cancelEditSection}
             onEdit={beginEditSection}
             onSave={saveProjectSection}
@@ -381,7 +386,7 @@ function ProjectDetailContent({
               <div className="space-y-3">
                 <label className="block">
                   <span className="text-xs font-semibold text-stone-500">
-                    标题
+                    {t('projectDetail.title')}
                   </span>
                   <input
                     className="input mt-1"
@@ -396,11 +401,11 @@ function ProjectDetailContent({
                 </label>
                 <label className="block">
                   <span className="text-xs font-semibold text-stone-500">
-                    说明
+                    {t('projectDetail.description')}
                   </span>
                   <textarea
                     className="input mt-1 min-h-24 resize-y"
-                    placeholder="项目说明"
+                    placeholder={t('projectDetail.descriptionPlaceholder')}
                     value={draft.description}
                     onChange={(event) =>
                       setDraft((current) => ({
@@ -412,7 +417,9 @@ function ProjectDetailContent({
                 </label>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-md bg-stone-50 p-3">
-                    <p className="text-xs text-stone-500">本周投入</p>
+                    <p className="text-xs text-stone-500">
+                      {t('projectDetail.thisWeekDuration')}
+                    </p>
                     <p className="mt-1 font-semibold text-stone-950">
                       {formatMinutes(
                         currentWeekRecords.reduce(
@@ -423,9 +430,11 @@ function ProjectDetailContent({
                     </p>
                   </div>
                   <div className="rounded-md bg-stone-50 p-3">
-                    <p className="text-xs text-stone-500">记录数</p>
+                    <p className="text-xs text-stone-500">
+                      {t('projectDetail.recordCount')}
+                    </p>
                     <p className="mt-1 font-semibold text-stone-950">
-                      {projectRecords.length} 条
+                      {t('common.recordsCount', { count: projectRecords.length })}
                     </p>
                   </div>
                 </div>
@@ -434,21 +443,27 @@ function ProjectDetailContent({
           >
             <div className="space-y-3">
               <div>
-                <p className="text-xs font-semibold text-stone-500">标题</p>
+                <p className="text-xs font-semibold text-stone-500">
+                  {t('projectDetail.title')}
+                </p>
                 <h3 className="mt-1 text-xl font-semibold text-stone-950">
                   {project.title}
                 </h3>
               </div>
               <div>
-                <p className="text-xs font-semibold text-stone-500">说明</p>
+                <p className="text-xs font-semibold text-stone-500">
+                  {t('projectDetail.description')}
+                </p>
                 <ValueText
-                  fallback="还没有项目说明。"
+                  fallback={t('projectDetail.descriptionEmpty')}
                   value={project.description}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-md bg-stone-50 p-3">
-                  <p className="text-xs text-stone-500">本周投入</p>
+                  <p className="text-xs text-stone-500">
+                    {t('projectDetail.thisWeekDuration')}
+                  </p>
                   <p className="mt-1 font-semibold text-stone-950">
                     {formatMinutes(
                       currentWeekRecords.reduce(
@@ -459,15 +474,17 @@ function ProjectDetailContent({
                   </p>
                 </div>
                 <div className="rounded-md bg-stone-50 p-3">
-                  <p className="text-xs text-stone-500">记录数</p>
+                  <p className="text-xs text-stone-500">
+                    {t('projectDetail.recordCount')}
+                  </p>
                   <p className="mt-1 font-semibold text-stone-950">
-                    {projectRecords.length} 条
+                    {t('common.recordsCount', { count: projectRecords.length })}
                   </p>
                 </div>
               </div>
               {project.isArchived && (
                 <span className="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-500">
-                  已归档
+                  {t('common.archived')}
                 </span>
               )}
             </div>
@@ -475,8 +492,8 @@ function ProjectDetailContent({
 
           <EditableProjectSection
             id="direction"
-            title="项目方向"
-            subtitle="当前项目要持续推进的主线。"
+            title={t('projectDetail.direction')}
+            subtitle={t('projectDetail.directionSubtitle')}
             onCancel={cancelEditSection}
             onEdit={beginEditSection}
             onSave={saveProjectSection}
@@ -485,7 +502,7 @@ function ProjectDetailContent({
             editor={
               <textarea
                 className="input min-h-28 resize-y"
-                placeholder="项目方向"
+                placeholder={t('projectDetail.directionPlaceholder')}
                 value={draft.direction}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -496,13 +513,16 @@ function ProjectDetailContent({
               />
             }
           >
-            <ValueText fallback="还没有项目方向。" value={project.direction} />
+            <ValueText
+              fallback={t('projectDetail.directionEmpty')}
+              value={project.direction}
+            />
           </EditableProjectSection>
 
           <EditableProjectSection
             id="hypothesis"
-            title="当前假设"
-            subtitle="记录项目判断、试验前提或需要验证的方向。"
+            title={t('projectDetail.hypothesis')}
+            subtitle={t('projectDetail.hypothesisSubtitle')}
             onCancel={cancelEditSection}
             onEdit={beginEditSection}
             onSave={saveProjectSection}
@@ -511,7 +531,7 @@ function ProjectDetailContent({
             editor={
               <textarea
                 className="input min-h-28 resize-y"
-                placeholder="当前假设"
+                placeholder={t('projectDetail.hypothesisPlaceholder')}
                 value={draft.hypothesis}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -522,13 +542,16 @@ function ProjectDetailContent({
               />
             }
           >
-            <ValueText fallback="还没有当前假设。" value={project.hypothesis} />
+            <ValueText
+              fallback={t('projectDetail.hypothesisEmpty')}
+              value={project.hypothesis}
+            />
           </EditableProjectSection>
 
           <EditableProjectSection
             id="completionCriteria"
-            title="完成标准"
-            subtitle="用来判断这个项目阶段是否完成的标准。"
+            title={t('projectDetail.completionCriteria')}
+            subtitle={t('projectDetail.completionCriteriaSubtitle')}
             onCancel={cancelEditSection}
             onEdit={beginEditSection}
             onSave={saveProjectSection}
@@ -537,7 +560,7 @@ function ProjectDetailContent({
             editor={
               <textarea
                 className="input min-h-28 resize-y"
-                placeholder="完成标准"
+                placeholder={t('projectDetail.completionCriteria')}
                 value={draft.completionCriteria}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -549,15 +572,15 @@ function ProjectDetailContent({
             }
           >
             <ValueText
-              fallback="还没有完成标准。"
+              fallback={t('projectDetail.completionCriteriaEmpty')}
               value={project.completionCriteria}
             />
           </EditableProjectSection>
 
           <EditableProjectSection
             id="backlog"
-            title="待办池"
-            subtitle="每行保存为一个待办项。"
+            title={t('projectDetail.backlog')}
+            subtitle={t('projectDetail.backlogSubtitle')}
             onCancel={cancelEditSection}
             onEdit={beginEditSection}
             onSave={saveProjectSection}
@@ -566,7 +589,7 @@ function ProjectDetailContent({
             editor={
               <textarea
                 className="input min-h-32 resize-y"
-                placeholder="待办池，每行一个"
+                placeholder={t('projectDetail.backlogPlaceholder')}
                 value={draft.backlogText}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -586,7 +609,9 @@ function ProjectDetailContent({
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-stone-400">还没有待办项。</p>
+              <p className="text-sm text-stone-400">
+                {t('projectDetail.backlogEmpty')}
+              </p>
             )}
           </EditableProjectSection>
 
@@ -597,7 +622,7 @@ function ProjectDetailContent({
               onClick={handleArchiveProject}
             >
               <ArchiveBoxIcon className="h-4 w-4" />
-              归档项目
+              {t('projectDetail.archiveProject')}
             </button>
           )}
         </>
@@ -606,20 +631,26 @@ function ProjectDetailContent({
       {activePanel === 'activity' ? (
         <>
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-stone-950">本周计划</h2>
+            <h2 className="text-base font-semibold text-stone-950">
+              {t('projectDetail.weekPlan')}
+            </h2>
             <textarea
               className="input mt-3 min-h-28 resize-y"
               value={currentPlan?.planText ?? ''}
-              placeholder="- 本周最小推进目标"
+              placeholder={t('projectDetail.weekPlanPlaceholder')}
               onChange={(event) => savePlan(event.target.value)}
             />
           </section>
 
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-stone-950">项目日志</h2>
+            <h2 className="text-base font-semibold text-stone-950">
+              {t('projectDetail.projectLog')}
+            </h2>
             <div className="mt-3 space-y-3">
               {projectRecords.length === 0 ? (
-                <p className="text-sm text-stone-500">还没有劳动记录。</p>
+                <p className="text-sm text-stone-500">
+                  {t('projectDetail.noRecords')}
+                </p>
               ) : (
                 projectRecords.map((record) => (
                   <article
@@ -658,7 +689,9 @@ function ProjectDetailContent({
 
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-stone-950">周小结</h2>
+              <h2 className="text-base font-semibold text-stone-950">
+                {t('projectDetail.weeklySnapshot')}
+              </h2>
               <button
                 className="flex h-9 items-center gap-2 rounded-md bg-teal-700 px-3 text-sm font-semibold text-white disabled:bg-stone-300"
                 disabled={generating}
@@ -666,7 +699,9 @@ function ProjectDetailContent({
                 onClick={handleGenerateSnapshot}
               >
                 <SparklesIcon className="h-4 w-4" />
-                {generating ? '生成中' : '模拟生成'}
+                {generating
+                  ? t('projectDetail.generating')
+                  : t('projectDetail.localGenerate')}
               </button>
             </div>
             <div className="mt-3 space-y-3">

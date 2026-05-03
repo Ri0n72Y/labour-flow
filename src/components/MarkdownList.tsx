@@ -3,6 +3,7 @@ import {
   markdownListItems,
   type MarkdownListStyle,
 } from '../lib/markdown/listRendering'
+import { useTranslation } from 'react-i18next'
 
 export function MarkdownList({
   text,
@@ -11,11 +12,12 @@ export function MarkdownList({
   text: string
   listStyle?: MarkdownListStyle
 }) {
+  const { t } = useTranslation()
   const items = markdownListItems(text)
   const List = listStyle === 'ordered' ? 'ol' : 'ul'
 
   if (items.length === 0) {
-    return <p className="text-sm text-stone-500">暂无内容</p>
+    return <p className="text-sm text-stone-500">{t('common.noContent')}</p>
   }
 
   return (

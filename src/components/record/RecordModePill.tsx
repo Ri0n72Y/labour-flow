@@ -7,15 +7,11 @@ import {
   StopIcon,
 } from '@heroicons/react/24/outline'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { RadioSwitch } from '../RadioSwitch'
 import type { RecordMode, RecordStatus } from '../../interfaces'
 import { cn } from '../../lib/styles/cn'
 import { formatDateTime, formatDuration } from '../../utils/time'
-
-const recordModeOptions = [
-  { value: 'timer', label: '实时计时', icon: ClockIcon },
-  { value: 'manual', label: '手动记录', icon: PencilSquareIcon },
-] as const
 
 const timerIconButtonClass =
   'inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20'
@@ -51,8 +47,13 @@ export function RecordModePill({
   onStopTimer: () => void
   onResetDraft: () => void
 }) {
+  const { t } = useTranslation()
   const hideModeSwitch =
     mode === 'timer' && ['running', 'paused'].includes(status)
+  const recordModeOptions = [
+    { value: 'timer', label: t('record.timerMode'), icon: ClockIcon },
+    { value: 'manual', label: t('record.manualMode'), icon: PencilSquareIcon },
+  ] as const
 
   return (
     <section
@@ -70,16 +71,16 @@ export function RecordModePill({
               </span>
               <span className="truncate text-xs text-stone-400">
                 {status === 'paused'
-                  ? '已暂停'
+                  ? t('record.paused')
                   : status === 'stopped'
-                    ? `已结束 ${formatDateTime(endAt)}`
-                    : formatDateTime(startAt) || '等待开始'}
+                    ? t('record.timerEnded', { time: formatDateTime(endAt) })
+                    : formatDateTime(startAt) || t('record.waitingStart')}
               </span>
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <span className="text-base font-semibold text-stone-950">
-                手动记录
+                {t('record.manualMode')}
               </span>
               <label className="inline-flex h-9 items-center rounded-full bg-amber-50/70 px-3 text-sm text-stone-700 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-200">
                 <input
@@ -91,7 +92,7 @@ export function RecordModePill({
                   onChange={(event) =>
                     onManualDurationChange(Number(event.target.value))
                   }
-                  aria-label="手动输入用时"
+                  aria-label={t('record.manualDurationInput')}
                 />
                 <span className="ml-1 text-xs text-stone-500">h</span>
               </label>
@@ -100,22 +101,22 @@ export function RecordModePill({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {mode === 'timer' && status === 'idle' && (
-            <TimerButton label="开始计时" onClick={onStartTimer}>
+            <TimerButton label={t('record.startTimer')} onClick={onStartTimer}>
               <PlayIcon className="h-5 w-5" />
             </TimerButton>
           )}
           {mode === 'timer' && status === 'running' && (
-            <TimerButton label="暂停计时" onClick={onPauseTimer}>
+            <TimerButton label={t('record.pauseTimer')} onClick={onPauseTimer}>
               <PauseIcon className="h-5 w-5" />
             </TimerButton>
           )}
           {mode === 'timer' && status === 'paused' && (
-            <TimerButton label="继续计时" onClick={onResumeTimer}>
+            <TimerButton label={t('record.resumeTimer')} onClick={onResumeTimer}>
               <PlayIcon className="h-5 w-5" />
             </TimerButton>
           )}
           {mode === 'timer' && status !== 'idle' && status !== 'stopped' && (
-            <TimerButton label="结束计时" onClick={onStopTimer}>
+            <TimerButton label={t('record.stopTimer')} onClick={onStopTimer}>
               <StopIcon className="h-5 w-5" />
             </TimerButton>
           )}
@@ -128,14 +129,14 @@ export function RecordModePill({
               )}
               type="button"
               onClick={onResetDraft}
-              aria-label="重置记录"
+              aria-label={t('record.reset')}
             >
               <ArrowPathIcon className="h-5 w-5" />
             </button>
           )}
           {!hideModeSwitch && (
             <RadioSwitch<RecordMode>
-              ariaLabel="记录模式"
+              ariaLabel={t('record.mode')}
               className={cn(mode === 'timer' && 'bg-stone-800')}
               options={recordModeOptions}
               value={mode}

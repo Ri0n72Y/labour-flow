@@ -1,5 +1,6 @@
 import { DocumentArrowUpIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ProjectCard } from '../components/project/ProjectCard'
 import { ProjectMarkdownImport } from '../components/project/MarkdownImportExport'
 import { useLabourStore } from '../store/useLabourStore'
@@ -9,6 +10,7 @@ export function ProjectsPage({
 }: {
   onOpenProject: (projectId: string) => void
 }) {
+  const { t } = useTranslation()
   const projects = useLabourStore((state) => state.projects)
   const createProject = useLabourStore((state) => state.createProject)
   const importMarkdownProject = useLabourStore(
@@ -38,7 +40,7 @@ export function ProjectsPage({
           onClick={handleCreate}
         >
           <PlusIcon className="h-5 w-5" />
-          新建项目
+          {t('projects.create')}
         </button>
         <button
           className="flex h-11 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-stone-700 shadow-sm ring-1 ring-stone-200"
@@ -46,7 +48,7 @@ export function ProjectsPage({
           onClick={() => setShowImport((current) => !current)}
         >
           <DocumentArrowUpIcon className="h-5 w-5" />
-          导入项目
+          {t('projects.import')}
         </button>
       </section>
 

@@ -1,6 +1,7 @@
 import { Switch } from '@headlessui/react'
 import ReactECharts from 'echarts-for-react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EmptyState } from '../components/EmptyState'
 import { MarkdownList } from '../components/MarkdownList'
 import type { ViewPeriod } from '../interfaces'
@@ -14,6 +15,7 @@ import {
 } from '../utils/time'
 
 export function ViewPage() {
+  const { t } = useTranslation()
   const records = useLaborStore((state) => state.records)
   const [period, setPeriod] = useState<ViewPeriod>('week')
   const [showCharts, setShowCharts] = useState(false)
@@ -81,10 +83,10 @@ export function ViewPage() {
       <div className="flex items-center justify-between rounded-md border border-stone-200 bg-white p-3 shadow-sm">
         <div>
           <p className="text-sm font-semibold text-stone-950">
-            {showCharts ? '图表模式' : '记录模式'}
+            {showCharts ? t('view.chartMode') : t('view.recordMode')}
           </p>
           <p className="mt-0.5 text-xs text-stone-500">
-            {showCharts ? '查看劳动统计' : '查看签名记录明细'}
+            {showCharts ? t('view.chartSubtitle') : t('view.recordSubtitle')}
           </p>
         </div>
         <Switch
@@ -92,7 +94,7 @@ export function ViewPage() {
           className={`${showCharts ? 'bg-teal-700' : 'bg-stone-300'} relative inline-flex h-8 w-16 items-center rounded-full transition`}
           onChange={setShowCharts}
         >
-          <span className="sr-only">切换查看模式</span>
+          <span className="sr-only">{t('view.chartToggle')}</span>
           <span
             className={`${showCharts ? 'translate-x-9' : 'translate-x-1'} inline-block h-6 w-6 rounded-full bg-white transition`}
           />
@@ -109,13 +111,15 @@ export function ViewPage() {
                 type="button"
                 onClick={() => setPeriod(item)}
               >
-                {item === 'day' ? '日' : item === 'week' ? '周' : '月'}
+                {t(`view.${item}`)}
               </button>
             ))}
           </div>
 
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-stone-950">时长统计</h2>
+            <h2 className="text-base font-semibold text-stone-950">
+              {t('view.durationStats')}
+            </h2>
             {records.length === 0 ? (
               <EmptyState />
             ) : (
@@ -124,9 +128,11 @@ export function ViewPage() {
           </section>
 
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-stone-950">标签分布</h2>
+            <h2 className="text-base font-semibold text-stone-950">
+              {t('view.tagDistribution')}
+            </h2>
             {tagTotals.length === 0 ? (
-              <p className="mt-4 text-sm text-stone-400">暂无标签数据</p>
+              <p className="mt-4 text-sm text-stone-400">{t('view.noTagData')}</p>
             ) : (
               <ReactECharts className="h-56" option={pieOption} />
             )}
@@ -151,7 +157,7 @@ export function ViewPage() {
                   </p>
                 </div>
                 <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                  已签名
+                  {t('view.signed')}
                 </span>
               </div>
               <div className="mt-3">
