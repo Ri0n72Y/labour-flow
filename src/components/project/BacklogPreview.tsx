@@ -8,114 +8,12 @@ import {
   CheckIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
+import {
+  parseBacklog,
+  type BacklogTask,
+  type BacklogTextLine,
+} from '../../lib/project/backlog'
 import { cn } from '../../lib/styles/cn'
-
-interface BacklogTask {
-  checked: boolean
-  lineIndex: number
-  text: string
-}
-
-interface BacklogTextLine {
-  lineIndex: number
-  text: string
-}
-
-interface BacklogSection {
-  id: string
-  title?: string
-  tasks: BacklogTask[]
-  lines: BacklogTextLine[]
-}
-
-function parseBacklogLine(line: string, lineIndex: number) {
-  const heading = line.match(/^####\s+(.+?)\s*$/)
-  if (heading) {
-    return { type: 'heading' as const, title: heading[1].trim() }
-  }
-
-  const task = line.match(/^\s*(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s+(.+?)\s*$/)
-  if (task) {
-    return {
-      type: 'task' as const,
-      task: {
-        checked: task[1].toLowerCase() === 'x',
-        lineIndex,
-        text: task[2].trim(),
-      },
-    }
-  }
-
-  const listItem = line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.+?)\s*$/)
-  if (listItem) {
-    return {
-      type: 'task' as const,
-      task: {
-        checked: false,
-        lineIndex,
-        text: listItem[1].trim(),
-      },
-    }
-  }
-
-  const text = line.trim()
-  return text ? { type: 'line' as const, line: { lineIndex, text } } : undefined
-}
-
-function parseBacklog(markdown: string, fallbackItems: string[]) {
-  const sections: BacklogSection[] = []
-  let current: BacklogSection = {
-    id: 'default',
-    tasks: [],
-    lines: [],
-  }
-
-  const pushCurrent = () => {
-    if (current.title || current.tasks.length || current.lines.length) {
-      sections.push(current)
-    }
-  }
-
-  if (markdown.trim()) {
-    markdown.split('\n').forEach((line, lineIndex) => {
-      const parsed = parseBacklogLine(line, lineIndex)
-      if (!parsed) return
-
-      if (parsed.type === 'heading') {
-        pushCurrent()
-        current = {
-          id: `section-${lineIndex}`,
-          title: parsed.title,
-          tasks: [],
-          lines: [],
-        }
-        return
-      }
-
-      if (parsed.type === 'task') {
-        current.tasks.push(parsed.task)
-        return
-      }
-
-      current.lines.push(parsed.line)
-    })
-    pushCurrent()
-  }
-
-  if (sections.length || !fallbackItems.length) return sections
-
-  return [
-    {
-      id: 'fallback',
-      tasks: fallbackItems.map((text, index) => ({
-        checked: false,
-        lineIndex: index,
-        text,
-      })),
-      lines: [],
-    },
-  ]
-}
 
 export function BacklogPreview({
   fallbackItems = [],
