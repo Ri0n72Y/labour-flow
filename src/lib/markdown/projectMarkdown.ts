@@ -46,9 +46,7 @@ function normalizeMarkdown(markdown: string) {
 }
 
 function linesFromList(items: string[] | undefined) {
-  return items?.length
-    ? items.map((item) => `- ${item}`).join('\n')
-    : '（未显式提取）'
+  return items?.length ? items.map((item) => `- ${item}`).join('\n') : ''
 }
 
 function projectPrompt(project: Project, promptTemplates: PromptTemplate[]) {
@@ -87,7 +85,7 @@ function formatRecord(record: LabourRecord) {
 }
 
 function formatSnapshot(snapshot: WeeklySnapshot | undefined, prompt: string) {
-  if (!snapshot?.content) return '（原文未提供）'
+  if (!snapshot?.content.trim()) return ''
   const promptLines = snapshot.prompt || prompt
   if (!promptLines) return snapshot.content.trim()
   return [
@@ -155,27 +153,42 @@ function createWeekDocuments(
 }
 
 function renderWeek(week: WeekDocument, label: string, prompt: string) {
-  const records = week.records.length
-    ? week.records.map(formatRecord).join('\n\n')
-    : '（保留原日志内容，仅做最小清洗）'
+  const sections = [
+    optionalMarkdownSection(
+      '#### 本周目标（可随时修改）',
+      week.plan?.planText
+    ),
+    optionalMarkdownSection(
+      '#### 工作日志（随手记录，不需要结构）',
+      week.records.map(formatRecord).filter(Boolean).join('\n\n')
+    ),
+    optionalMarkdownSection(
+      '#### 小结（由日志自动生成）',
+      formatSnapshot(week.snapshot, prompt)
+    ),
+  ].filter(Boolean)
 
-  return `### ${label}
+  if (!sections.length) return ''
 
-#### 本周目标（可随时修改）
-${cleanBlock(week.plan?.planText, '（由原“计划”转换，不需要重写）')}
+  return [`### ${label}`, ...sections].join('\n\n---\n\n')
+}
 
----
+function optionalMarkdownSection(heading: string, body: string | undefined) {
+  const cleaned = cleanBlock(body)
+  return cleaned ? `${heading}\n${cleaned}` : ''
+}
 
-#### 工作日志（随手记录，不需要结构）
+function renderProjectDirection(project: Project) {
+  const sections = [
+    optionalMarkdownSection('### 当前方向', project.direction),
+    optionalMarkdownSection('### 当前假设', project.hypothesis),
+    optionalMarkdownSection('### 当前完成标准', project.completionCriteria),
+    optionalMarkdownSection('### Backlog（可选）', linesFromList(project.backlog)),
+  ].filter(Boolean)
 
-${records}
+  if (!sections.length) return ''
 
----
-
-#### 小结（由日志自动生成）
-${formatSnapshot(week.snapshot, prompt)}
-
----`
+  return ['## 项目方向（低频更新）', ...sections].join('\n\n')
 }
 
 export function exportProjectToMarkdown(
@@ -203,36 +216,19 @@ export function exportProjectToMarkdown(
     ])
   )
   const prompt = projectPrompt(project, promptTemplates)
-  const renderedWeeks = weeks.length
-    ? weeks
-        .map((week) =>
-          renderWeek(
-            week,
-            labels.get(`${week.weekStart}:${week.weekEnd}`) ?? '第X周',
-            prompt
-          )
-        )
-        .join('\n\n')
-    : projectMarkdownTemplate
-        .split('\n---\n\n## 项目方向（低频更新）')[0]
-        .trim()
+  const renderedWeeks = weeks
+    .map((week) =>
+      renderWeek(
+        week,
+        labels.get(`${week.weekStart}:${week.weekEnd}`) ?? '第X周',
+        prompt
+      )
+    )
+    .filter(Boolean)
+    .join('\n\n')
+  const projectDirection = renderProjectDirection(project)
 
-  return `${renderedWeeks}
-
-## 项目方向（低频更新）
-
-### 当前方向
-${cleanBlock(project.direction, '（从“目标”或文档整体意图中提取总结）')}
-
-### 当前假设
-${cleanBlock(project.hypothesis, '（如果没有明确内容，可留空或根据内容推断）')}
-
-### 当前完成标准
-${cleanBlock(project.completionCriteria, '（如果原文有目标或交付要求，从中提取）')}
-
-### Backlog（可选）
-${linesFromList(project.backlog)}
-`
+  return [renderedWeeks, projectDirection].filter(Boolean).join('\n\n')
 }
 
 function escapeRegExp(value: string) {

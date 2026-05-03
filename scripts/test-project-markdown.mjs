@@ -78,6 +78,24 @@ try {
   assert.equal(weeklyPlans.length, 3)
   assert.equal(weeklySnapshots.length, 2)
 
+  const emptyGenerated = exportProjectToMarkdown(
+    {
+      id: 'empty-project',
+      title: '空项目',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    [],
+    [],
+    [],
+    [],
+    { currentDate: '2026-04-30', includeEmptyCurrentWeek: false },
+  )
+
+  assert.equal(emptyGenerated, '')
+  assert.ok(!emptyGenerated.includes('## 项目方向（低频更新）'))
+  assert.ok(!emptyGenerated.includes('### 当前方向'))
+
   const normalizeLine = (line) => line.trim().replace(/\s+/g, ' ')
   const sourceLines = new Set(
     example

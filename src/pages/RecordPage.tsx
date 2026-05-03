@@ -67,7 +67,8 @@ export function RecordPage() {
     clockTick,
   })
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
-  const hasTimerDraft = Boolean(recording.startAt) || recording.status !== 'idle'
+  const hasTimerDraft =
+    Boolean(recording.startAt) || recording.status !== 'idle'
   const selectedProjectId = projectId || fallbackProjectId
   const canSign =
     hasKeys &&
@@ -201,6 +202,12 @@ export function RecordPage() {
 
   return (
     <div className="space-y-4">
+      <ProjectSelector
+        projects={activeProjects}
+        selectedProjectId={selectedProjectId}
+        onChange={setProjectId}
+        onCreate={createQuickProject}
+      />
       <RecordModePill
         mode={recording.mode}
         status={recording.status}
@@ -255,13 +262,6 @@ export function RecordPage() {
         onChange={setTagInput}
         onToggle={recording.toggleTag}
         onSubmit={submitTagInput}
-      />
-
-      <ProjectSelector
-        projects={activeProjects}
-        selectedProjectId={selectedProjectId}
-        onChange={setProjectId}
-        onCreate={createQuickProject}
       />
 
       <button

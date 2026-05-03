@@ -44,7 +44,7 @@ export function ProjectCard({
           type="button"
           onClick={onOpen}
         >
-          查看项目
+          查看详情
         </button>
       )}
     </article>

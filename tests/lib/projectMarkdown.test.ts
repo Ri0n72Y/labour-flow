@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { exportProjectToMarkdown, parseProjectMarkdown } from '../../src/lib/markdown/projectMarkdown'
-import type { LabourRecord, Project, PromptTemplate, WeeklyPlan, WeeklySnapshot } from '../../src/types/domain'
+import {
+  exportProjectToMarkdown,
+  parseProjectMarkdown,
+} from '../../src/lib/markdown/projectMarkdown'
+import type {
+  LabourRecord,
+  Project,
+  PromptTemplate,
+  WeeklyPlan,
+  WeeklySnapshot,
+} from '../../src/types/domain'
 
 const project: Project = {
   id: 'project-1',
@@ -97,5 +106,65 @@ describe('project markdown helpers', () => {
     expect(parsed.weeklyPlans).toHaveLength(1)
     expect(parsed.weeklySnapshots).toHaveLength(1)
     expect(parsed.promptTemplates).toHaveLength(1)
+  })
+
+  it('omits empty project and week sections from exported markdown', () => {
+    const markdown = exportProjectToMarkdown(
+      {
+        id: 'project-empty',
+        title: 'Empty project',
+        createdAt: '2026-04-01T00:00:00.000Z',
+        updatedAt: '2026-04-01T00:00:00.000Z',
+      },
+      [],
+      [
+        {
+          id: 'plan-empty',
+          projectId: 'project-empty',
+          weekStart: '2026-04-27',
+          weekEnd: '2026-05-03',
+          planText: '',
+          createdAt: '2026-04-30T00:00:00.000Z',
+          updatedAt: '2026-04-30T00:00:00.000Z',
+        },
+      ],
+      [],
+      [],
+      { currentDate: '2026-04-30', includeEmptyCurrentWeek: false },
+    )
+
+    expect(markdown).toBe('')
+    expect(markdown).not.toContain('### 当前方向')
+    expect(markdown).not.toContain('### 当前假设')
+    expect(markdown).not.toContain('### 当前完成标准')
+    expect(markdown).not.toContain('### Backlog（可选）')
+    expect(markdown).not.toContain('#### 本周目标（可随时修改）')
+  })
+
+  it('exports only the headings that have content', () => {
+    const markdown = exportProjectToMarkdown(
+      {
+        ...project,
+        hypothesis: '',
+        completionCriteria: '',
+        backlog: [],
+      },
+      [],
+      weeklyPlans,
+      [],
+      [],
+      { currentDate: '2026-04-30', includeEmptyCurrentWeek: false },
+    )
+
+    expect(markdown).toContain('#### 本周目标（可随时修改）')
+    expect(markdown).toContain('- keep coverage moving')
+    expect(markdown).toContain('## 项目方向（低频更新）')
+    expect(markdown).toContain('### 当前方向')
+    expect(markdown).toContain('Keep moving')
+    expect(markdown).not.toContain('### 当前假设')
+    expect(markdown).not.toContain('### 当前完成标准')
+    expect(markdown).not.toContain('### Backlog（可选）')
+    expect(markdown).not.toContain('#### 工作日志（随手记录，不需要结构）')
+    expect(markdown).not.toContain('#### 小结（由日志自动生成）')
   })
 })

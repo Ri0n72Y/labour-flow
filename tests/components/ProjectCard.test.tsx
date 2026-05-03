@@ -30,7 +30,7 @@ describe('ProjectCard', () => {
     expect(screen.getByText('Progress summary')).toBeInTheDocument()
     expect(screen.getByText('3 条记录')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /查看项目/ }))
+    await user.click(screen.getByRole('button', { name: /查看详情/ }))
     expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
