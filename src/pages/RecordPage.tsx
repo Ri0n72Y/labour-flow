@@ -10,13 +10,21 @@ import type { LaborData } from '../interfaces'
 import { todayKey } from '../lib/date'
 import {
   clampDuration,
-  descriptionFromLogs,
   durationLabel,
   formatDurationShort,
   formatStartTime,
   getElapsedSeconds,
   type ListStyle,
 } from '../lib/recording/recordFormatting'
+import {
+  activeProjects as getActiveProjects,
+  canSignDraft,
+  fallbackProjectId,
+  labourRecordInputFromPrepared,
+  prepareLaborRecord,
+  resolveSelectedProjectId,
+  sanitizeTagInput,
+} from '../lib/recording/recordSubmission'
 import { useLabourStore } from '../store/useLabourStore'
 import { useLaborStore } from '../stores/laborStore'
 import { useRecordingStore } from '../stores/recordingStore'
@@ -26,7 +34,7 @@ import {
   publicKeyPayload,
   signLaborRecord,
 } from '../utils/crypto'
-import { createManualRange, nowIso, todayInputValue } from '../utils/time'
+import { nowIso, todayInputValue } from '../utils/time'
 
 export function RecordPage() {
   const { t } = useTranslation()
@@ -39,13 +47,13 @@ export function RecordPage() {
   const tagHistory = useLaborStore((state) => state.tagHistory)
   const user = useUserStore()
   const activeProjects = useMemo(
-    () => projects.filter((project) => !project.isArchived),
+    () => getActiveProjects(projects),
     [projects]
   )
-  const latestProjectId = labourRecords.find((record) =>
-    activeProjects.some((project) => project.id === record.projectId)
-  )?.projectId
-  const fallbackProjectId = latestProjectId ?? activeProjects[0]?.id ?? ''
+  const fallbackProject = useMemo(
+    () => fallbackProjectId(labourRecords, activeProjects),
+    [activeProjects, labourRecords]
+  )
   const [projectId, setProjectId] = useState('')
   const [listStyle, setListStyle] = useState<ListStyle>('unordered')
   const [clockTick, setClockTick] = useState(0)
@@ -71,11 +79,12 @@ export function RecordPage() {
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
   const hasTimerDraft =
     Boolean(recording.startAt) || recording.status !== 'idle'
-  const selectedProjectId = projectId || fallbackProjectId
-  const canSign =
-    hasKeys &&
-    (recording.mode === 'manual' || recording.status === 'stopped') &&
-    (recording.logs.length > 0 || recording.activeText.trim())
+  const selectedProjectId = resolveSelectedProjectId(
+    activeProjects,
+    projectId,
+    fallbackProject
+  )
+  const canSign = canSignDraft({ ...recording, hasKeys })
   const durationText =
     recording.mode === 'timer'
       ? formatDurationShort(elapsedSeconds)
@@ -103,7 +112,7 @@ export function RecordPage() {
   }
 
   const submitTagInput = () => {
-    const tag = tagInput.trim().replace(/^#/, '')
+    const tag = sanitizeTagInput(tagInput)
     if (!tag) return
     if (!recording.tags.includes(tag)) recording.toggleTag(tag)
     setTagInput('')
@@ -136,52 +145,32 @@ export function RecordPage() {
     if (recording.activeText.trim()) recording.commitActiveLog()
     const latest = useRecordingStore.getState()
     const nextProjectId = ensureProjectId()
-    const range =
-      latest.mode === 'manual'
-        ? createManualRange(todayInputValue(), latest.manualDurationHours)
-        : { startAt: latest.startAt, endAt: latest.endAt }
-
-    if (!range.startAt || !range.endAt || latest.logs.length === 0) {
-      setMessage(t('record.messages.writeLog'))
-      return
-    }
-
-    const duration =
-      latest.mode === 'manual'
-        ? Math.round(latest.manualDurationHours * 3600)
-        : Math.max(
-            0,
-            Math.round(
-              (Date.parse(range.endAt) - Date.parse(range.startAt)) / 1000
-            ) - (latest.pausedSeconds ?? 0)
-          )
-    const description = descriptionFromLogs(latest.logs, listStyle)
-    if (!description) {
+    const prepared = prepareLaborRecord({
+      createAt: nowIso(),
+      createBy: publicKeyPayload(user.publicKeyJwk),
+      draft: latest,
+      listStyle,
+      manualDateValue: todayInputValue(),
+      wid: crypto.randomUUID(),
+    })
+    if (!prepared.ok) {
       setMessage(t('record.messages.writeLog'))
       return
     }
 
     setSigning(true)
     try {
-      const recordBase: Omit<LaborData, 'signature'> = {
-        wid: crypto.randomUUID(),
-        startAt: range.startAt,
-        endAt: range.endAt,
-        duration,
-        createBy: publicKeyPayload(user.publicKeyJwk),
-        createAt: nowIso(),
-        outcome: '',
-        description,
-        tags: latest.tags,
-      }
+      const recordBase: Omit<LaborData, 'signature'> = prepared.recordBase
       const signature = await signLaborRecord(recordBase, user.privateKeyJwk)
       addSignedRecord({ ...recordBase, signature, logEntries: latest.logs })
-      addLabourRecord({
-        projectId: nextProjectId,
-        date: todayKey(),
-        content: description,
-        durationMinutes: Math.round(duration / 60),
-      })
+      addLabourRecord(
+        labourRecordInputFromPrepared({
+          projectId: nextProjectId,
+          date: todayKey(),
+          description: prepared.description,
+          duration: prepared.duration,
+        })
+      )
       recording.resetDraft()
       setTagInput('')
       setMessage(t('record.messages.signed'))

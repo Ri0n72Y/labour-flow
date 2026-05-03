@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import { useRef } from 'react'
 import { cn } from '../../lib/styles/cn'
+import { HeadlessTextarea } from '../forms/HeadlessFields'
 import { useAutoGrowTextarea } from './useAutoGrowTextarea'
 
 export function AutoGrowTextarea({
@@ -24,7 +25,7 @@ export function AutoGrowTextarea({
   useAutoGrowTextarea(ref, value)
 
   return (
-    <textarea
+    <HeadlessTextarea
       ref={ref}
       className={cn('notebook-input', className)}
       placeholder={placeholder}

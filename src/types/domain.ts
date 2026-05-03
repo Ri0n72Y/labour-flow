@@ -15,6 +15,7 @@ export interface Project {
   hypothesis?: string
   completionCriteria?: string
   backlog?: string[]
+  backlogText?: string
   createdAt: string
   updatedAt: string
   isArchived?: boolean

@@ -7,6 +7,10 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GitHubIcon } from '../components/icons/GitHubIcon'
 import { KeyIcon } from '../components/icons/KeyIcon'
+import {
+  HeadlessTextInput,
+  HeadlessTextarea,
+} from '../components/forms/HeadlessFields'
 import { BadgeList } from '../components/profile/BadgeList'
 import { LabourHeatmap } from '../components/profile/LabourHeatmap'
 import { LanguageSelector } from '../components/profile/LanguageSelector'
@@ -128,7 +132,7 @@ export function UserPage({
           <div className="min-w-0 flex-1">
             <label className="text-sm font-medium text-stone-600">
               {t('user.username')}
-              <input
+              <HeadlessTextInput
                 className="input mt-1"
                 value={uidDraft}
                 onChange={(event) => {
@@ -160,7 +164,7 @@ export function UserPage({
         </div>
         <label className="mt-3 block text-sm font-medium text-stone-700">
           {t('user.mainDirection')}
-          <input
+          <HeadlessTextInput
             className="input mt-1"
             value={userProfile.mainDirection ?? ''}
             onChange={(event) =>
@@ -170,7 +174,7 @@ export function UserPage({
         </label>
         <label className="mt-3 block text-sm font-medium text-stone-700">
           {t('user.bio')}
-          <textarea
+          <HeadlessTextarea
             className="input mt-1 min-h-20 resize-y"
             value={userProfile.bio ?? ''}
             placeholder={t('user.bioPlaceholder')}

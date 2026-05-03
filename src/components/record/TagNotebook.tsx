@@ -2,6 +2,7 @@ import { PlusIcon, TagIcon } from '@heroicons/react/24/outline'
 import type { KeyboardEvent } from 'react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { HeadlessTextInput } from '../forms/HeadlessFields'
 
 const defaultTags = ['写作', '开发', '沟通', '研究', '设计', '维护']
 
@@ -63,7 +64,7 @@ export function TagNotebook({
           )}
         </div>
         <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-t border-dashed border-amber-200 pt-3">
-          <input
+          <HeadlessTextInput
             className="h-9 rounded-md bg-amber-50/70 px-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-amber-200"
             placeholder={t('record.inputTagPlaceholder')}
             value={value}

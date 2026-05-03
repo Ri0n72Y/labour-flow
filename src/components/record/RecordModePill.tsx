@@ -12,6 +12,7 @@ import { RadioSwitch } from '../RadioSwitch'
 import type { RecordMode, RecordStatus } from '../../interfaces'
 import { cn } from '../../lib/styles/cn'
 import { formatDateTime, formatDuration } from '../../utils/time'
+import { HeadlessTextInput } from '../forms/HeadlessFields'
 
 const timerIconButtonClass =
   'inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20'
@@ -83,7 +84,7 @@ export function RecordModePill({
                 {t('record.manualMode')}
               </span>
               <label className="inline-flex h-9 items-center rounded-full bg-amber-50/70 px-3 text-sm text-stone-700 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-200">
-                <input
+                <HeadlessTextInput
                   className="w-16 bg-transparent text-right font-mono text-base font-semibold text-stone-950 outline-none"
                   min={0}
                   step={0.5}

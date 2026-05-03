@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PromptTemplate } from '../../types/domain'
+import { HeadlessTextarea } from '../forms/HeadlessFields'
 
 export function PromptEditor({
   prompt,
@@ -17,7 +18,7 @@ export function PromptEditor({
       <h2 className="text-base font-semibold text-stone-950">
         {t('prompt.title')}
       </h2>
-      <textarea
+      <HeadlessTextarea
         className="input mt-3 min-h-32 resize-y"
         value={content}
         onChange={(event) => setContent(event.target.value)}

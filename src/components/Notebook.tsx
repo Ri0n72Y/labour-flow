@@ -13,6 +13,7 @@ import { markdownListItems } from '../lib/markdown/listRendering'
 import { nextListPrefix, insertAtCursor } from '../lib/notebook/textEditing'
 import { durationLabel, type ListStyle } from '../lib/recording/recordFormatting'
 import { cn } from '../lib/styles/cn'
+import { HeadlessTextarea } from './forms/HeadlessFields'
 import { DurationRow } from './notebook/DurationRow'
 import { EditableLogItem } from './notebook/EditableLogItem'
 import { useAutoGrowTextarea } from './notebook/useAutoGrowTextarea'
@@ -169,7 +170,7 @@ export function Notebook({
           </LogList>
         )}
         <div className="grid grid-cols-[1fr_auto_auto] items-start gap-2">
-          <textarea
+          <HeadlessTextarea
             ref={activeInputRef}
             className="notebook-input notebook-active-input"
             placeholder={t('record.logPlaceholder')}
