@@ -21,6 +21,9 @@ export function ProjectsPage({
     (state) => state.computeProjectStats
   )
   const [showImport, setShowImport] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
+  const activeProjects = projects.filter((project) => !project.isArchived)
+  const archivedProjects = projects.filter((project) => project.isArchived)
 
   const handleCreate = () => {
     const project = createProject({
@@ -64,7 +67,7 @@ export function ProjectsPage({
         />
       ) : null}
 
-      {projects.map((project) => (
+      {activeProjects.map((project) => (
         <ProjectCard
           key={project.id}
           project={project}
@@ -72,6 +75,30 @@ export function ProjectsPage({
           onOpen={() => onOpenProject(project.id)}
         />
       ))}
+
+      {archivedProjects.length ? (
+        <section className="space-y-3">
+          <button
+            className="flex h-10 w-full items-center justify-center rounded-md bg-stone-100 px-3 text-sm font-semibold text-stone-600"
+            type="button"
+            onClick={() => setShowArchived((current) => !current)}
+          >
+            {showArchived
+              ? t('projects.hideArchived')
+              : t('projects.showArchived', { count: archivedProjects.length })}
+          </button>
+          {showArchived
+            ? archivedProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  stats={computeProjectStats(project.id)}
+                  onOpen={() => onOpenProject(project.id)}
+                />
+              ))
+            : null}
+        </section>
+      ) : null}
     </div>
   )
 }

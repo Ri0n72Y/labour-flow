@@ -71,7 +71,9 @@ export function RecordPage() {
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
   const hasTimerDraft =
     Boolean(recording.startAt) || recording.status !== 'idle'
-  const selectedProjectId = projectId || fallbackProjectId
+  const selectedProjectId = activeProjects.some((project) => project.id === projectId)
+    ? projectId
+    : fallbackProjectId
   const canSign =
     hasKeys &&
     (recording.mode === 'manual' || recording.status === 'stopped') &&

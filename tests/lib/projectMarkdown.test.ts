@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   exportProjectToMarkdown,
   parseProjectMarkdown,
@@ -96,6 +98,7 @@ describe('project markdown helpers', () => {
       'All weekly notes are exported',
     )
     expect(parsed.project.backlog).toEqual(['first item', 'second item'])
+    expect(parsed.project.backlogText).toBe('- first item\n- second item')
     expect(parsed.records).toEqual([
       {
         date: '2026-04-30',
@@ -166,5 +169,55 @@ describe('project markdown helpers', () => {
     expect(markdown).not.toContain('### Backlog（可选）')
     expect(markdown).not.toContain('#### 工作日志（随手记录，不需要结构）')
     expect(markdown).not.toContain('#### 小结（由日志自动生成）')
+  })
+
+  it('preserves nested backlog sections from the sprint document', () => {
+    const sprint = readFileSync(resolve('docs/sprint.md'), 'utf8')
+    const parsed = parseProjectMarkdown(sprint)
+
+    expect(parsed.project.direction).toContain('建立劳动链 MVP 最小闭环')
+    expect(parsed.project.hypothesis).toContain('LabourFlow 只承担个人中心')
+    expect(parsed.project.completionCriteria).toContain(
+      'blockchain-service 能够接收 LabourFlow 提交的 signed labour record',
+    )
+    expect(parsed.project.backlogText).toContain('#### A. 基础协议与创世区块')
+    expect(parsed.project.backlogText).toContain(
+      '- [ ] 明确 CUE schema 是协议源，TS / Go 类型是实现投影',
+    )
+    expect(parsed.project.backlog).toContain(
+      '明确 CUE schema 是协议源，TS / Go 类型是实现投影',
+    )
+
+    const exported = exportProjectToMarkdown(
+      {
+        id: 'sprint',
+        title: 'Sprint',
+        createdAt: '2026-05-03T00:00:00.000Z',
+        updatedAt: '2026-05-03T00:00:00.000Z',
+        ...parsed.project,
+      } as Project,
+      [
+        {
+          id: 'record-sprint',
+          projectId: 'sprint',
+          date: '2026-05-03',
+          content: '- 新增导入适配',
+          durationMinutes: 60,
+          createdAt: '2026-05-03T00:00:00.000Z',
+          updatedAt: '2026-05-03T00:00:00.000Z',
+        },
+      ],
+      [],
+      [],
+      [],
+      { currentDate: '2026-05-03', includeEmptyCurrentWeek: false },
+    )
+
+    expect(exported).toContain('#### A. 基础协议与创世区块')
+    expect(exported).toContain(
+      '- [ ] 明确 CUE schema 是协议源，TS / Go 类型是实现投影',
+    )
+    expect(exported).toContain('##### 2026-05-03')
+    expect(exported).toContain('- 新增导入适配')
   })
 })

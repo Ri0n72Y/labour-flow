@@ -29,6 +29,7 @@ export const resources = {
       common: {
         add: '添加',
         archived: '已归档',
+        cancel: '取消',
         cancelSection: '放弃{{title}}',
         copy: '复制',
         deleteLog: '删除日志',
@@ -114,7 +115,9 @@ export const resources = {
       },
       projects: {
         create: '新建项目',
+        hideArchived: '隐藏已归档项目',
         import: '导入项目',
+        showArchived: '显示已归档项目（{{count}}）',
       },
       projectCard: {
         details: '查看详情',
@@ -129,6 +132,7 @@ export const resources = {
         importPlaceholder: '粘贴项目标记文档，导入解析会尽量宽松处理。',
         importSuccess: '标记文档已导入，已有记录不会被删除。',
         importTitle: '导入项目',
+        uploadFile: '上传文件',
       },
       projectDetail: {
         archive: '档案',
@@ -143,6 +147,10 @@ export const resources = {
         completionCriteriaEmpty: '还没有完成标准。',
         completionCriteriaSubtitle: '用来判断这个项目阶段是否完成的标准。',
         data: '数据',
+        confirmDelete: '确认删除',
+        deleteConfirmBody: '“{{title}}”没有劳动记录，可以删除。删除后项目说明、计划、小结和提示词都会从本地移除。',
+        deleteConfirmTitle: '删除这个项目？',
+        deleteProject: '删除项目',
         description: '说明',
         descriptionEmpty: '还没有项目说明。',
         descriptionPlaceholder: '项目说明',
@@ -265,6 +273,7 @@ export const resources = {
       common: {
         add: 'Add',
         archived: 'Archived',
+        cancel: 'Cancel',
         cancelSection: 'Cancel {{title}}',
         copy: 'Copy',
         deleteLog: 'Delete log',
@@ -350,7 +359,9 @@ export const resources = {
       },
       projects: {
         create: 'New project',
+        hideArchived: 'Hide archived projects',
         import: 'Import project',
+        showArchived: 'Show archived projects ({{count}})',
       },
       projectCard: {
         details: 'View details',
@@ -365,6 +376,7 @@ export const resources = {
         importPlaceholder: 'Paste a project markdown document. Import parsing is intentionally tolerant.',
         importSuccess: 'Markdown document imported. Existing records were not deleted.',
         importTitle: 'Import project',
+        uploadFile: 'Upload file',
       },
       projectDetail: {
         archive: 'Archive',
@@ -379,6 +391,10 @@ export const resources = {
         completionCriteriaEmpty: 'No completion criteria yet.',
         completionCriteriaSubtitle: 'The standard for judging whether this project phase is complete.',
         data: 'Data',
+        confirmDelete: 'Delete',
+        deleteConfirmBody: '"{{title}}" has no labour records, so it can be deleted. Project notes, plans, summaries, and prompts will be removed locally.',
+        deleteConfirmTitle: 'Delete this project?',
+        deleteProject: 'Delete project',
         description: 'Description',
         descriptionEmpty: 'No project description yet.',
         descriptionPlaceholder: 'Project description',

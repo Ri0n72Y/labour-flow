@@ -2,6 +2,7 @@ import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { HeadlessTextInput } from './forms/HeadlessFields'
 
 export function TagPicker({
   open,
@@ -40,7 +41,7 @@ export function TagPicker({
             {t('tagPicker.title')}
           </DialogTitle>
           <div className="mt-4 flex gap-2">
-            <input
+            <HeadlessTextInput
               className="input"
               placeholder={t('tagPicker.placeholder')}
               value={query}

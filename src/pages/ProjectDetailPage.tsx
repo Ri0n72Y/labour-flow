@@ -1,13 +1,24 @@
 import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+} from '@headlessui/react'
+import {
   ArchiveBoxIcon,
   ArrowLeftIcon,
   CheckIcon,
+  ExclamationTriangleIcon,
   PencilSquareIcon,
   SparklesIcon,
+  TrashIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { type ReactNode, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  HeadlessTextInput,
+  HeadlessTextarea,
+} from '../components/forms/HeadlessFields'
 import { ProjectMarkdownExport } from '../components/project/MarkdownImportExport'
 import { ProjectDocumentPreview } from '../components/project/ProjectDocumentPreview'
 import { PromptEditor } from '../components/prompt/PromptEditor'
@@ -47,7 +58,7 @@ function toProjectDraft(project: Project): ProjectDraft {
     direction: project.direction ?? '',
     hypothesis: project.hypothesis ?? '',
     completionCriteria: project.completionCriteria ?? '',
-    backlogText: (project.backlog ?? []).join('\n'),
+    backlogText: project.backlogText ?? (project.backlog ?? []).join('\n'),
   }
 }
 
@@ -75,6 +86,7 @@ function EditableProjectSection({
   onEdit,
   onSave,
   onSelect,
+  readOnly = false,
   selected,
   subtitle,
   title,
@@ -87,6 +99,7 @@ function EditableProjectSection({
   onEdit: (sectionId: ProjectSectionId) => void
   onSave: (sectionId: ProjectSectionId) => void
   onSelect: (sectionId: ProjectSectionId) => void
+  readOnly?: boolean
   selected: boolean
   subtitle?: string
   title: string
@@ -94,75 +107,91 @@ function EditableProjectSection({
   const { t } = useTranslation()
 
   return (
-    <section
-      className={cn(
-        'rounded-md border bg-white p-4 text-left shadow-sm transition',
-        selected
-          ? 'border-teal-500 ring-2 ring-teal-600/20'
-          : 'border-stone-200'
-      )}
-      tabIndex={0}
-      onClick={() => onSelect(id)}
-      onKeyDown={(event) => {
-        if (event.currentTarget !== event.target) return
-        if (event.key !== 'Enter' && event.key !== ' ') return
-        event.preventDefault()
-        onSelect(id)
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold text-stone-950">{title}</h2>
-          {subtitle && (
-            <p className="mt-1 text-xs leading-5 text-stone-500">{subtitle}</p>
-          )}
-        </div>
-        <div className="flex h-9 w-20 shrink-0 justify-end gap-1">
-          {editing ? (
-            <>
+    <>
+      <section
+        className={cn(
+          'rounded-md border bg-white p-4 text-left shadow-sm transition',
+          selected
+            ? 'border-teal-500 ring-2 ring-teal-600/20'
+            : 'border-stone-200'
+        )}
+        tabIndex={0}
+        onClick={() => onSelect(id)}
+        onKeyDown={(event) => {
+          if (event.currentTarget !== event.target) return
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          onSelect(id)
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-stone-950">{title}</h2>
+            {subtitle && (
+              <p className="mt-1 text-xs leading-5 text-stone-500">{subtitle}</p>
+            )}
+          </div>
+          <div className="flex h-9 w-9 shrink-0 justify-end">
+            {!readOnly && (selected || editing) ? (
               <button
-                aria-label={t('common.saveSection', { title })}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-teal-700 text-white transition hover:bg-teal-800"
-                title={t('common.saveSection', { title })}
+                aria-label={t('common.editSection', { title })}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-stone-950 text-white transition hover:bg-stone-800"
+                title={t('common.editSection', { title })}
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
-                  onSave(id)
+                  onEdit(id)
                 }}
               >
-                <CheckIcon className="h-5 w-5" />
+                <PencilSquareIcon className="h-5 w-5" />
               </button>
+            ) : null}
+          </div>
+        </div>
+        <div className="mt-3 max-h-56 overflow-auto pr-1">{children}</div>
+      </section>
+
+      <Dialog className="relative z-50" open={editing} onClose={onCancel}>
+        <div className="fixed inset-0 bg-stone-950/35" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-end justify-center p-3 sm:items-center">
+          <DialogPanel className="w-full max-w-2xl rounded-md bg-white p-4 text-left shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <DialogTitle className="text-base font-semibold text-stone-950">
+                {title}
+              </DialogTitle>
               <button
                 aria-label={t('common.cancelSection', { title })}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-stone-100 text-stone-600 transition hover:bg-stone-200"
                 title={t('common.cancelSection', { title })}
                 type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onCancel()
-                }}
+                onClick={onCancel}
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
-            </>
-          ) : selected ? (
-            <button
-              aria-label={t('common.editSection', { title })}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-stone-950 text-white transition hover:bg-stone-800"
-              title={t('common.editSection', { title })}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation()
-                onEdit(id)
-              }}
-            >
-              <PencilSquareIcon className="h-5 w-5" />
-            </button>
-          ) : null}
+            </div>
+            <div className="mt-4 max-h-[68vh] overflow-auto pr-1">{editor}</div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-teal-700 px-3 text-sm font-semibold text-white transition hover:bg-teal-800"
+                type="button"
+                onClick={() => onSave(id)}
+              >
+                <CheckIcon className="h-5 w-5" />
+                {t('common.save')}
+              </button>
+              <button
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-stone-100 px-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-200"
+                type="button"
+                onClick={onCancel}
+              >
+                <XMarkIcon className="h-5 w-5" />
+                {t('common.cancel')}
+              </button>
+            </div>
+          </DialogPanel>
         </div>
-      </div>
-      <div className="mt-3">{editing ? editor : children}</div>
-    </section>
+      </Dialog>
+    </>
   )
 }
 
@@ -218,6 +247,7 @@ function ProjectDetailContent({
   )
   const updateProject = useLabourStore((state) => state.updateProject)
   const archiveProject = useLabourStore((state) => state.archiveProject)
+  const deleteProject = useLabourStore((state) => state.deleteProject)
   const exportMarkdown = useLabourStore(
     (state) => state.exportProjectToMarkdown
   )
@@ -229,6 +259,7 @@ function ProjectDetailContent({
   const [editingSection, setEditingSection] = useState<ProjectSectionId | null>(
     null
   )
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [draft, setDraft] = useState<ProjectDraft>(() =>
     toProjectDraft(project)
   )
@@ -254,6 +285,8 @@ function ProjectDetailContent({
     promptTemplates.find((prompt) => prompt.projectId === projectId) ??
     promptTemplates.find((prompt) => prompt.scope === 'global')
   const markdown = exportMarkdown(project.id)
+  const isArchived = Boolean(project.isArchived)
+  const canDeleteProject = projectRecords.length === 0
 
   const handleSelectSection = (sectionId: ProjectSectionId) => {
     if (editingSection && editingSection !== sectionId) return
@@ -261,6 +294,7 @@ function ProjectDetailContent({
   }
 
   const beginEditSection = (sectionId: ProjectSectionId) => {
+    if (isArchived) return
     setSelectedSection(sectionId)
     setDraft(toProjectDraft(project))
     setEditingSection(sectionId)
@@ -272,6 +306,7 @@ function ProjectDetailContent({
   }
 
   const saveProjectSection = (sectionId: ProjectSectionId) => {
+    if (isArchived) return
     const updates: Partial<Project> = {}
 
     if (sectionId === 'summary') {
@@ -292,10 +327,17 @@ function ProjectDetailContent({
     }
 
     if (sectionId === 'backlog') {
+      updates.backlogText = draft.backlogText
       updates.backlog = draft.backlogText
         .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
+        .map((line) =>
+          line
+            .trim()
+            .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/, '')
+            .replace(/^\[[ xX]\]\s+/, '')
+            .trim()
+        )
+        .filter((line) => line && !line.startsWith('#'))
     }
 
     updateProject(project.id, updates)
@@ -305,6 +347,7 @@ function ProjectDetailContent({
   }
 
   const savePlan = (planText: string) => {
+    if (isArchived) return
     if (currentPlan) {
       updateWeeklyPlan(currentPlan.id, { planText })
       return
@@ -317,7 +360,14 @@ function ProjectDetailContent({
     onBack()
   }
 
+  const handleDeleteProject = () => {
+    if (!deleteProject(project.id)) return
+    setConfirmingDelete(false)
+    onBack()
+  }
+
   const handleGenerateSnapshot = async () => {
+    if (isArchived) return
     setGenerating(true)
     setMessage('')
     try {
@@ -381,6 +431,7 @@ function ProjectDetailContent({
             onEdit={beginEditSection}
             onSave={saveProjectSection}
             onSelect={handleSelectSection}
+            readOnly={isArchived}
             {...sectionState('summary')}
             editor={
               <div className="space-y-3">
@@ -388,7 +439,7 @@ function ProjectDetailContent({
                   <span className="text-xs font-semibold text-stone-500">
                     {t('projectDetail.title')}
                   </span>
-                  <input
+                  <HeadlessTextInput
                     className="input mt-1"
                     value={draft.title}
                     onChange={(event) =>
@@ -403,7 +454,7 @@ function ProjectDetailContent({
                   <span className="text-xs font-semibold text-stone-500">
                     {t('projectDetail.description')}
                   </span>
-                  <textarea
+                  <HeadlessTextarea
                     className="input mt-1 min-h-24 resize-y"
                     placeholder={t('projectDetail.descriptionPlaceholder')}
                     value={draft.description}
@@ -498,9 +549,10 @@ function ProjectDetailContent({
             onEdit={beginEditSection}
             onSave={saveProjectSection}
             onSelect={handleSelectSection}
+            readOnly={isArchived}
             {...sectionState('direction')}
             editor={
-              <textarea
+              <HeadlessTextarea
                 className="input min-h-28 resize-y"
                 placeholder={t('projectDetail.directionPlaceholder')}
                 value={draft.direction}
@@ -527,9 +579,10 @@ function ProjectDetailContent({
             onEdit={beginEditSection}
             onSave={saveProjectSection}
             onSelect={handleSelectSection}
+            readOnly={isArchived}
             {...sectionState('hypothesis')}
             editor={
-              <textarea
+              <HeadlessTextarea
                 className="input min-h-28 resize-y"
                 placeholder={t('projectDetail.hypothesisPlaceholder')}
                 value={draft.hypothesis}
@@ -556,9 +609,10 @@ function ProjectDetailContent({
             onEdit={beginEditSection}
             onSave={saveProjectSection}
             onSelect={handleSelectSection}
+            readOnly={isArchived}
             {...sectionState('completionCriteria')}
             editor={
-              <textarea
+              <HeadlessTextarea
                 className="input min-h-28 resize-y"
                 placeholder={t('projectDetail.completionCriteria')}
                 value={draft.completionCriteria}
@@ -585,9 +639,10 @@ function ProjectDetailContent({
             onEdit={beginEditSection}
             onSave={saveProjectSection}
             onSelect={handleSelectSection}
+            readOnly={isArchived}
             {...sectionState('backlog')}
             editor={
-              <textarea
+              <HeadlessTextarea
                 className="input min-h-32 resize-y"
                 placeholder={t('projectDetail.backlogPlaceholder')}
                 value={draft.backlogText}
@@ -600,14 +655,20 @@ function ProjectDetailContent({
               />
             }
           >
-            {project.backlog?.length ? (
-              <ul className="space-y-2 text-sm text-stone-700">
-                {project.backlog.map((item) => (
-                  <li key={item} className="rounded-md bg-stone-50 px-3 py-2">
-                    {item}
-                  </li>
-                ))}
-              </ul>
+            {project.backlogText?.trim() || project.backlog?.length ? (
+              project.backlogText?.trim() ? (
+                <pre className="whitespace-pre-wrap text-sm leading-6 text-stone-700">
+                  {project.backlogText}
+                </pre>
+              ) : (
+                <ul className="space-y-2 text-sm text-stone-700">
+                  {(project.backlog ?? []).map((item) => (
+                    <li key={item} className="rounded-md bg-stone-50 px-3 py-2">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )
             ) : (
               <p className="text-sm text-stone-400">
                 {t('projectDetail.backlogEmpty')}
@@ -615,32 +676,55 @@ function ProjectDetailContent({
             )}
           </EditableProjectSection>
 
-          {!project.isArchived && (
-            <button
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-stone-100 px-3 text-sm font-semibold text-stone-700"
-              type="button"
-              onClick={handleArchiveProject}
-            >
-              <ArchiveBoxIcon className="h-4 w-4" />
-              {t('projectDetail.archiveProject')}
-            </button>
+          {!isArchived && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="flex h-10 items-center justify-center gap-2 rounded-md bg-stone-100 px-3 text-sm font-semibold text-stone-700"
+                type="button"
+                onClick={handleArchiveProject}
+              >
+                <ArchiveBoxIcon className="h-4 w-4" />
+                {t('projectDetail.archiveProject')}
+              </button>
+              {canDeleteProject ? (
+                <button
+                  className="flex h-10 items-center justify-center gap-2 rounded-md bg-red-600 px-3 text-sm font-semibold text-white"
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  {t('projectDetail.deleteProject')}
+                </button>
+              ) : null}
+            </div>
           )}
         </>
       ) : null}
 
       {activePanel === 'activity' ? (
         <>
-          <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-stone-950">
-              {t('projectDetail.weekPlan')}
-            </h2>
-            <textarea
-              className="input mt-3 min-h-28 resize-y"
-              value={currentPlan?.planText ?? ''}
-              placeholder={t('projectDetail.weekPlanPlaceholder')}
-              onChange={(event) => savePlan(event.target.value)}
-            />
-          </section>
+          {!isArchived ? (
+            <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-semibold text-stone-950">
+                {t('projectDetail.weekPlan')}
+              </h2>
+              <HeadlessTextarea
+                className="input mt-3 min-h-28 resize-y"
+                value={currentPlan?.planText ?? ''}
+                placeholder={t('projectDetail.weekPlanPlaceholder')}
+                onChange={(event) => savePlan(event.target.value)}
+              />
+            </section>
+          ) : currentPlan?.planText ? (
+            <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-semibold text-stone-950">
+                {t('projectDetail.weekPlan')}
+              </h2>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700">
+                {currentPlan.planText}
+              </p>
+            </section>
+          ) : null}
 
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
             <h2 className="text-base font-semibold text-stone-950">
@@ -674,35 +758,39 @@ function ProjectDetailContent({
             </div>
           </section>
 
-          <PromptEditor
-            prompt={projectPrompt}
-            onSave={(content) =>
-              upsertPromptTemplate({
-                id: projectPrompt?.projectId ? projectPrompt.id : undefined,
-                name: `${project.title} 周总结提示词`,
-                scope: 'project',
-                projectId,
-                content,
-              })
-            }
-          />
+          {!isArchived ? (
+            <PromptEditor
+              prompt={projectPrompt}
+              onSave={(content) =>
+                upsertPromptTemplate({
+                  id: projectPrompt?.projectId ? projectPrompt.id : undefined,
+                  name: `${project.title} 周总结提示词`,
+                  scope: 'project',
+                  projectId,
+                  content,
+                })
+              }
+            />
+          ) : null}
 
           <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-stone-950">
                 {t('projectDetail.weeklySnapshot')}
               </h2>
-              <button
-                className="flex h-9 items-center gap-2 rounded-md bg-teal-700 px-3 text-sm font-semibold text-white disabled:bg-stone-300"
-                disabled={generating}
-                type="button"
-                onClick={handleGenerateSnapshot}
-              >
-                <SparklesIcon className="h-4 w-4" />
-                {generating
-                  ? t('projectDetail.generating')
-                  : t('projectDetail.localGenerate')}
-              </button>
+              {!isArchived ? (
+                <button
+                  className="flex h-9 items-center gap-2 rounded-md bg-teal-700 px-3 text-sm font-semibold text-white disabled:bg-stone-300"
+                  disabled={generating}
+                  type="button"
+                  onClick={handleGenerateSnapshot}
+                >
+                  <SparklesIcon className="h-4 w-4" />
+                  {generating
+                    ? t('projectDetail.generating')
+                    : t('projectDetail.localGenerate')}
+                </button>
+              ) : null}
             </div>
             <div className="mt-3 space-y-3">
               {weeklySnapshots
@@ -739,6 +827,49 @@ function ProjectDetailContent({
           />
         </>
       ) : null}
+
+      <Dialog
+        className="relative z-50"
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+      >
+        <div className="fixed inset-0 bg-stone-950/35" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-end justify-center p-3 sm:items-center">
+          <DialogPanel className="w-full max-w-md rounded-md bg-white p-4 text-left shadow-xl">
+            <div className="flex gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-700">
+                <ExclamationTriangleIcon className="h-6 w-6" />
+              </span>
+              <div>
+                <DialogTitle className="text-base font-semibold text-stone-950">
+                  {t('projectDetail.deleteConfirmTitle')}
+                </DialogTitle>
+                <p className="mt-2 text-sm leading-6 text-stone-600">
+                  {t('projectDetail.deleteConfirmBody', {
+                    title: project.title,
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                className="h-10 rounded-md bg-red-600 px-3 text-sm font-semibold text-white"
+                type="button"
+                onClick={handleDeleteProject}
+              >
+                {t('projectDetail.confirmDelete')}
+              </button>
+              <button
+                className="h-10 rounded-md bg-stone-100 px-3 text-sm font-semibold text-stone-700"
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </DialogPanel>
+        </div>
+      </Dialog>
     </div>
   )
 }

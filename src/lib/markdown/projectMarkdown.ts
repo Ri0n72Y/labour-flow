@@ -179,11 +179,12 @@ function optionalMarkdownSection(heading: string, body: string | undefined) {
 }
 
 function renderProjectDirection(project: Project) {
+  const backlog = project.backlogText?.trim() || linesFromList(project.backlog)
   const sections = [
     optionalMarkdownSection('### 当前方向', project.direction),
     optionalMarkdownSection('### 当前假设', project.hypothesis),
     optionalMarkdownSection('### 当前完成标准', project.completionCriteria),
-    optionalMarkdownSection('### Backlog（可选）', linesFromList(project.backlog)),
+    optionalMarkdownSection('### Backlog（可选）', backlog),
   ].filter(Boolean)
 
   if (!sections.length) return ''
@@ -237,20 +238,59 @@ function escapeRegExp(value: string) {
 
 function headingSection(markdown: string, level: number, heading: string) {
   const hashes = '#'.repeat(level)
-  const nextHeading = '#'.repeat(Math.max(2, level))
   const pattern = new RegExp(
-    `^${hashes} ${escapeRegExp(heading)}\\n([\\s\\S]*?)(?=\\n${nextHeading}{1,2} |\\n---\\n|(?![\\s\\S]))`,
+    `^${hashes}\\s+${escapeRegExp(heading)}\\s*$`,
     'm'
   )
-  return markdown.match(pattern)?.[1]?.trim()
+  const match = markdown.match(pattern)
+  if (!match || match.index === undefined) return undefined
+  const bodyStart = match.index + match[0].length
+  const rest = markdown.slice(bodyStart)
+  const nextSameOrHigher = new RegExp(`\\n#{1,${level}}\\s+`, 'm')
+  const endMatch = rest.match(nextSameOrHigher)
+  const body = endMatch?.index === undefined ? rest : rest.slice(0, endMatch.index)
+  return body.trim()
 }
 
 function subsection(markdown: string, heading: string) {
   const pattern = new RegExp(
-    `^#### ${escapeRegExp(heading)}\\n([\\s\\S]*?)(?=\\n---\\n|\\n#### |(?![\\s\\S]))`,
+    `^####\\s+${escapeRegExp(heading)}\\s*$`,
     'm'
   )
-  return markdown.match(pattern)?.[1]?.trim()
+  const match = markdown.match(pattern)
+  if (!match || match.index === undefined) return undefined
+  const bodyStart = match.index + match[0].length
+  const rest = markdown.slice(bodyStart)
+  const endMatch = rest.match(/\n(?:---\s*\n|#{1,4}\s+)/m)
+  const body = endMatch?.index === undefined ? rest : rest.slice(0, endMatch.index)
+  return body.trim()
+}
+
+function headingBlocks(
+  markdown: string,
+  level: number,
+  matchesHeading: (heading: string) => boolean
+) {
+  const headingPattern = new RegExp(`^#{${level}}\\s+(.+?)\\s*$`, 'gm')
+  const headings = Array.from(markdown.matchAll(headingPattern))
+    .map((match) => ({
+      heading: match[1].trim(),
+      index: match.index ?? 0,
+      length: match[0].length,
+    }))
+    .filter((match) => matchesHeading(match.heading))
+
+  return headings.map((heading) => {
+    const bodyStart = heading.index + heading.length
+    const rest = markdown.slice(bodyStart)
+    const endMatch = rest.match(new RegExp(`\\n#{1,${level}}\\s+`, 'm'))
+    const body =
+      endMatch?.index === undefined ? rest : rest.slice(0, endMatch.index)
+    return {
+      heading: heading.heading,
+      body: body.trim(),
+    }
+  })
 }
 
 function parseDurationMinutes(block: string) {
@@ -266,6 +306,22 @@ function stripDurationLines(block: string) {
     .filter((line) => !/^\s*[-*]?\s*~\s*\d+(?:\.\d+)?\s*h\s*$/i.test(line))
     .join('\n')
     .trim()
+}
+
+function stripMarkdownListMarker(line: string) {
+  return line
+    .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/, '')
+    .replace(/^\[[ xX]\]\s+/, '')
+    .trim()
+}
+
+function backlogItemsFromMarkdown(block: string) {
+  return block
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^[-*+]\s+|\d+[.)]\s+/.test(line))
+    .map(stripMarkdownListMarker)
+    .filter((line) => line && !line.startsWith('（'))
 }
 
 function parseRecords(block: string | undefined) {
@@ -319,28 +375,26 @@ export function parseProjectMarkdown(markdown: string): {
   const direction = headingSection(normalized, 3, '当前方向')
   const hypothesis = headingSection(normalized, 3, '当前假设')
   const completionCriteria = headingSection(normalized, 3, '当前完成标准')
-  const backlogText =
+  const backlogText = cleanBlock(
     headingSection(normalized, 3, 'Backlog（可选）') ??
     headingSection(normalized, 3, 'Backlog') ??
     headingSection(normalized, 3, '待办池') ??
     ''
-  const backlog = backlogText
-    .split('\n')
-    .map((line) => line.replace(/^[-*]\s*/, '').trim())
-    .filter((line) => line && !line.startsWith('（'))
+  )
+  const backlog = backlogItemsFromMarkdown(backlogText)
 
-  const weekBlocks = Array.from(
-    normalized.matchAll(
-      /^###\s+(第.+?周|本周(?:（.*?）)?)\s*\n([\s\S]*?)(?=\n###\s+(?:第.+?周|本周)|\n## 项目方向|(?![\s\S]))/gm
-    )
+  const weekBlocks = headingBlocks(
+    normalized,
+    3,
+    (heading) => /^第.+?周$/.test(heading) || /^本周(?:（.*?）)?$/.test(heading)
   )
   const records: Partial<LabourRecord>[] = []
   const weeklyPlans: Partial<WeeklyPlan>[] = []
   const weeklySnapshots: Partial<WeeklySnapshot>[] = []
   const promptTemplates: Partial<PromptTemplate>[] = []
 
-  weekBlocks.forEach((match, index) => {
-    const weekBlock = match[2].trim()
+  weekBlocks.forEach((week, index) => {
+    const weekBlock = week.body
     const weekRecords = parseRecords(
       subsection(weekBlock, '工作日志（随手记录，不需要结构）')
     )
@@ -380,6 +434,7 @@ export function parseProjectMarkdown(markdown: string): {
       hypothesis,
       completionCriteria,
       backlog,
+      backlogText,
     },
     records,
     weeklyPlans,

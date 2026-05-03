@@ -40,6 +40,7 @@ interface LabourStoreState {
   createProject: (project: ProjectInput) => Project
   updateProject: (id: string, project: Partial<Project>) => void
   archiveProject: (id: string) => void
+  deleteProject: (id: string) => boolean
   addLabourRecord: (record: LabourRecordInput) => LabourRecord
   updateLabourRecord: (id: string, record: Partial<LabourRecord>) => void
   deleteLabourRecord: (id: string) => void
@@ -89,6 +90,11 @@ function refreshBadges(state: Pick<LabourStoreState, 'labourRecords' | 'weeklySn
   return deriveBadges(state.labourRecords, state.weeklySnapshots)
 }
 
+function projectIsArchived(projects: Project[], projectId: string | undefined) {
+  if (!projectId) return false
+  return projects.some((project) => project.id === projectId && project.isArchived)
+}
+
 export const useLabourStore = create<LabourStoreState>()(
   persist(
     (set, get) => {
@@ -125,7 +131,7 @@ export const useLabourStore = create<LabourStoreState>()(
         updateProject: (id, projectInput) =>
           set((state) => ({
             projects: state.projects.map((project) =>
-              project.id === id
+              project.id === id && !project.isArchived
                 ? { ...project, ...projectInput, updatedAt: now() }
                 : project,
             ),
@@ -138,7 +144,35 @@ export const useLabourStore = create<LabourStoreState>()(
                 : project,
             ),
           })),
+        deleteProject: (id) => {
+          const exists = get().projects.some((project) => project.id === id)
+          if (!exists) return false
+          const hasRecords = get().labourRecords.some(
+            (record) => record.projectId === id,
+          )
+          if (hasRecords) return false
+
+          set((state) => ({
+            projects: state.projects.filter((project) => project.id !== id),
+            weeklyPlans: state.weeklyPlans.filter(
+              (plan) => plan.projectId !== id,
+            ),
+            weeklySnapshots: state.weeklySnapshots.filter(
+              (snapshot) => snapshot.projectId !== id,
+            ),
+            promptTemplates: state.promptTemplates.filter(
+              (prompt) => prompt.projectId !== id,
+            ),
+          }))
+          return true
+        },
         addLabourRecord: (recordInput) => {
+          const project = get().projects.find(
+            (item) => item.id === recordInput.projectId,
+          )
+          if (project?.isArchived) {
+            throw new Error('已归档项目不能新增劳动记录。')
+          }
           const timestamp = now()
           const record = {
             ...recordInput,
@@ -173,6 +207,9 @@ export const useLabourStore = create<LabourStoreState>()(
             }
           }),
         addWeeklyPlan: (planInput) => {
+          if (projectIsArchived(get().projects, planInput.projectId)) {
+            throw new Error('已归档项目不能修改周计划。')
+          }
           const timestamp = now()
           const plan = {
             ...planInput,
@@ -186,10 +223,16 @@ export const useLabourStore = create<LabourStoreState>()(
         updateWeeklyPlan: (id, planInput) =>
           set((state) => ({
             weeklyPlans: state.weeklyPlans.map((plan) =>
-              plan.id === id ? { ...plan, ...planInput, updatedAt: now() } : plan,
+              plan.id === id &&
+              !projectIsArchived(state.projects, plan.projectId)
+                ? { ...plan, ...planInput, updatedAt: now() }
+                : plan,
             ),
           })),
         addWeeklySnapshot: (snapshotInput) => {
+          if (projectIsArchived(get().projects, snapshotInput.projectId)) {
+            throw new Error('已归档项目不能新增周小结。')
+          }
           const snapshot = { ...snapshotInput, id: createId() }
           set((state) => {
             const next = {
@@ -206,7 +249,10 @@ export const useLabourStore = create<LabourStoreState>()(
         updateWeeklySnapshot: (id, snapshotInput) =>
           set((state) => {
             const weeklySnapshots = state.weeklySnapshots.map((snapshot) =>
-              snapshot.id === id ? { ...snapshot, ...snapshotInput } : snapshot,
+              snapshot.id === id &&
+              !projectIsArchived(state.projects, snapshot.projectId)
+                ? { ...snapshot, ...snapshotInput }
+                : snapshot,
             )
             return {
               weeklySnapshots,
@@ -214,6 +260,9 @@ export const useLabourStore = create<LabourStoreState>()(
             }
           }),
         upsertPromptTemplate: (promptInput) => {
+          if (projectIsArchived(get().projects, promptInput.projectId)) {
+            throw new Error('已归档项目不能修改提示词。')
+          }
           const timestamp = now()
           const prompt = {
             ...promptInput,
@@ -242,6 +291,9 @@ export const useLabourStore = create<LabourStoreState>()(
             const existing = projectId
               ? get().projects.find((project) => project.id === projectId)
               : undefined
+            if (existing?.isArchived) {
+              throw new Error('已归档项目不能导入覆盖。')
+            }
             const project: Project = existing
               ? { ...existing, ...parsed.project, updatedAt: timestamp }
               : {
@@ -252,6 +304,7 @@ export const useLabourStore = create<LabourStoreState>()(
                   hypothesis: parsed.project.hypothesis,
                   completionCriteria: parsed.project.completionCriteria,
                   backlog: parsed.project.backlog,
+                  backlogText: parsed.project.backlogText,
                   createdAt: timestamp,
                   updatedAt: timestamp,
                 }
