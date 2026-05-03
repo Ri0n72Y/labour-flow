@@ -19,6 +19,8 @@ import {
   HeadlessTextInput,
   HeadlessTextarea,
 } from '../components/forms/HeadlessFields'
+import { MarkdownBlockPreview } from '../components/MarkdownBlockPreview'
+import { BacklogPreview } from '../components/project/BacklogPreview'
 import { ProjectMarkdownExport } from '../components/project/MarkdownImportExport'
 import { ProjectDocumentPreview } from '../components/project/ProjectDocumentPreview'
 import { PromptEditor } from '../components/prompt/PromptEditor'
@@ -75,6 +77,45 @@ function ValueText({ fallback, value }: { fallback: string; value?: string }) {
       {hasValue ? value : fallback}
     </p>
   )
+}
+
+function backlogItemsFromText(value: string) {
+  return value
+    .split('\n')
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/, '')
+        .replace(/^\[[ xX]\]\s+/, '')
+        .trim()
+    )
+    .filter((line) => line && !line.startsWith('#'))
+}
+
+function linesFromBacklog(items: string[] | undefined) {
+  return items?.map((item) => `- ${item}`).join('\n') ?? ''
+}
+
+function updateBacklogTaskLine(
+  markdown: string,
+  lineIndex: number,
+  checked: boolean
+) {
+  const lines = markdown.split('\n')
+  const line = lines[lineIndex]
+  if (line === undefined) return markdown
+
+  const marker = checked ? 'x' : ' '
+  if (/^\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\]\s+/.test(line)) {
+    lines[lineIndex] = line.replace(/\[[ xX]\]/, `[${marker}]`)
+  } else {
+    lines[lineIndex] = line.replace(
+      /^(\s*(?:[-*+]|\d+[.)])\s+)/,
+      `$1[${marker}] `
+    )
+  }
+
+  return lines.join('\n')
 }
 
 function EditableProjectSection({
@@ -328,16 +369,7 @@ function ProjectDetailContent({
 
     if (sectionId === 'backlog') {
       updates.backlogText = draft.backlogText
-      updates.backlog = draft.backlogText
-        .split('\n')
-        .map((line) =>
-          line
-            .trim()
-            .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/, '')
-            .replace(/^\[[ xX]\]\s+/, '')
-            .trim()
-        )
-        .filter((line) => line && !line.startsWith('#'))
+      updates.backlog = backlogItemsFromText(draft.backlogText)
     }
 
     updateProject(project.id, updates)
@@ -364,6 +396,19 @@ function ProjectDetailContent({
     if (!deleteProject(project.id)) return
     setConfirmingDelete(false)
     onBack()
+  }
+
+  const handleToggleBacklogTask = (lineIndex: number, checked: boolean) => {
+    if (isArchived) return
+    const backlogText = updateBacklogTaskLine(
+      project.backlogText ?? linesFromBacklog(project.backlog),
+      lineIndex,
+      checked
+    )
+    updateProject(project.id, {
+      backlogText,
+      backlog: backlogItemsFromText(backlogText),
+    })
   }
 
   const handleGenerateSnapshot = async () => {
@@ -595,7 +640,7 @@ function ProjectDetailContent({
               />
             }
           >
-            <ValueText
+            <MarkdownBlockPreview
               fallback={t('projectDetail.hypothesisEmpty')}
               value={project.hypothesis}
             />
@@ -625,7 +670,7 @@ function ProjectDetailContent({
               />
             }
           >
-            <ValueText
+            <MarkdownBlockPreview
               fallback={t('projectDetail.completionCriteriaEmpty')}
               value={project.completionCriteria}
             />
@@ -656,19 +701,12 @@ function ProjectDetailContent({
             }
           >
             {project.backlogText?.trim() || project.backlog?.length ? (
-              project.backlogText?.trim() ? (
-                <pre className="whitespace-pre-wrap text-sm leading-6 text-stone-700">
-                  {project.backlogText}
-                </pre>
-              ) : (
-                <ul className="space-y-2 text-sm text-stone-700">
-                  {(project.backlog ?? []).map((item) => (
-                    <li key={item} className="rounded-md bg-stone-50 px-3 py-2">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              )
+              <BacklogPreview
+                fallbackItems={project.backlog}
+                markdown={project.backlogText}
+                readOnly={isArchived}
+                onToggleTask={handleToggleBacklogTask}
+              />
             ) : (
               <p className="text-sm text-stone-400">
                 {t('projectDetail.backlogEmpty')}
