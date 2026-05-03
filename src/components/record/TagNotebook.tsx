@@ -1,6 +1,7 @@
 import { PlusIcon, TagIcon } from '@heroicons/react/24/outline'
 import type { KeyboardEvent } from 'react'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const defaultTags = ['写作', '开发', '沟通', '研究', '设计', '维护']
 
@@ -19,6 +20,7 @@ export function TagNotebook({
   onToggle: (tag: string) => void
   onSubmit: () => void
 }) {
+  const { t } = useTranslation()
   const suggestions = useMemo(() => {
     const query = value.trim().toLowerCase()
     return Array.from(new Set([...tagHistory, ...defaultTags]))
@@ -37,13 +39,15 @@ export function TagNotebook({
     <section className="notebook-paper rounded-md border border-amber-200 p-4 text-left shadow-sm">
       <div className="mb-3 flex items-center gap-2">
         <TagIcon className="h-4 w-4 text-teal-700" />
-        <h2 className="text-base font-semibold text-stone-950">标签</h2>
+        <h2 className="text-base font-semibold text-stone-950">
+          {t('record.tags.title')}
+        </h2>
       </div>
       <div className="space-y-3">
         <div className="flex min-h-8 flex-wrap gap-2">
           {tags.length === 0 ? (
             <span className="text-sm leading-8 text-stone-400">
-              为这次劳动加一个简短标记...
+              {t('record.noTagHint')}
             </span>
           ) : (
             tags.map((tag) => (
@@ -61,7 +65,7 @@ export function TagNotebook({
         <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-t border-dashed border-amber-200 pt-3">
           <input
             className="h-9 rounded-md bg-amber-50/70 px-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-amber-200"
-            placeholder="输入标签，Enter 确认"
+            placeholder={t('record.inputTagPlaceholder')}
             value={value}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={handleKeyDown}
@@ -71,7 +75,7 @@ export function TagNotebook({
             type="button"
             disabled={!value.trim()}
             onClick={onSubmit}
-            aria-label="添加标签"
+            aria-label={t('record.addTag')}
           >
             <PlusIcon className="h-5 w-5" />
           </button>

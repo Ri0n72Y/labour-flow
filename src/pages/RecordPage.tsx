@@ -1,5 +1,6 @@
 import { CheckIcon } from '@heroicons/react/24/outline'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Notebook } from '../components/Notebook'
 import { ProjectSelector } from '../components/record/ProjectSelector'
 import { RecordModePill } from '../components/record/RecordModePill'
@@ -28,6 +29,7 @@ import {
 import { createManualRange, nowIso, todayInputValue } from '../utils/time'
 
 export function RecordPage() {
+  const { t } = useTranslation()
   const recording = useRecordingStore()
   const projects = useLabourStore((state) => state.projects)
   const labourRecords = useLabourStore((state) => state.labourRecords)
@@ -38,10 +40,6 @@ export function RecordPage() {
   const user = useUserStore()
   const activeProjects = useMemo(
     () => projects.filter((project) => !project.isArchived),
-    [projects]
-  )
-  const projectById = useMemo(
-    () => new Map(projects.map((project) => [project.id, project])),
     [projects]
   )
   const latestProjectId = labourRecords.find((record) =>
@@ -71,9 +69,9 @@ export function RecordPage() {
     clockTick,
   })
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
-  const hasTimerDraft = Boolean(recording.startAt) || recording.status !== 'idle'
+  const hasTimerDraft =
+    Boolean(recording.startAt) || recording.status !== 'idle'
   const selectedProjectId = projectId || fallbackProjectId
-  const selectedProject = projectById.get(selectedProjectId)
   const canSign =
     hasKeys &&
     (recording.mode === 'manual' || recording.status === 'stopped') &&
@@ -101,7 +99,7 @@ export function RecordPage() {
       description: '从一条笔记开始。',
     })
     setProjectId(project.id)
-    setMessage('已切换到新的劳动项目。')
+    setMessage(t('record.messages.createdProject'))
   }
 
   const submitTagInput = () => {
@@ -116,12 +114,12 @@ export function RecordPage() {
     setRegistering(true)
     try {
       await user.generateKeys()
-      setMessage('注册已完成，可以开始记录劳动。')
+      setMessage(t('record.messages.registered'))
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : '注册失败，请确认正在使用安全上下文。'
+          : t('record.messages.registerFailed')
       )
     } finally {
       setRegistering(false)
@@ -131,7 +129,7 @@ export function RecordPage() {
   const handleSign = async () => {
     setMessage('')
     if (!user.privateKeyJwk || !user.publicKeyJwk) {
-      setMessage('请先完成注册并生成本地密钥。')
+      setMessage(t('record.messages.keyRequired'))
       return
     }
 
@@ -144,7 +142,7 @@ export function RecordPage() {
         : { startAt: latest.startAt, endAt: latest.endAt }
 
     if (!range.startAt || !range.endAt || latest.logs.length === 0) {
-      setMessage('请至少写下一条劳动日志。')
+      setMessage(t('record.messages.writeLog'))
       return
     }
 
@@ -159,7 +157,7 @@ export function RecordPage() {
           )
     const description = descriptionFromLogs(latest.logs, listStyle)
     if (!description) {
-      setMessage('请至少写下一条劳动日志。')
+      setMessage(t('record.messages.writeLog'))
       return
     }
 
@@ -186,9 +184,9 @@ export function RecordPage() {
       })
       recording.resetDraft()
       setTagInput('')
-      setMessage('记录已签名保存。')
+      setMessage(t('record.messages.signed'))
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '签名失败，请重试。')
+      setMessage(error instanceof Error ? error.message : t('record.messages.signFailed'))
     } finally {
       setSigning(false)
     }
@@ -206,10 +204,12 @@ export function RecordPage() {
 
   return (
     <div className="space-y-4">
-      <p className="px-1 text-left text-xs text-stone-400">
-        当前项目：{selectedProject?.title ?? '自动创建'}
-      </p>
-
+      <ProjectSelector
+        projects={activeProjects}
+        selectedProjectId={selectedProjectId}
+        onChange={setProjectId}
+        onCreate={createQuickProject}
+      />
       <RecordModePill
         mode={recording.mode}
         status={recording.status}
@@ -266,13 +266,6 @@ export function RecordPage() {
         onSubmit={submitTagInput}
       />
 
-      <ProjectSelector
-        projects={activeProjects}
-        selectedProjectId={selectedProjectId}
-        onChange={setProjectId}
-        onCreate={createQuickProject}
-      />
-
       <button
         className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-stone-950 px-4 text-sm font-semibold text-white disabled:bg-stone-300"
         disabled={!canSign || signing}
@@ -282,7 +275,7 @@ export function RecordPage() {
         }}
       >
         <CheckIcon className="h-5 w-5" />
-        {signing ? '签名中' : '完成并签名'}
+        {signing ? t('record.signing') : t('record.finishAndSign')}
       </button>
 
       {message && (

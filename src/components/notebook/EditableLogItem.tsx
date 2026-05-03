@@ -1,5 +1,6 @@
 import { TrashIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { LaborLogEntry } from '../../interfaces'
 import { cn } from '../../lib/styles/cn'
 import { AutoGrowTextarea } from './AutoGrowTextarea'
@@ -13,6 +14,7 @@ export function EditableLogItem({
   onUpdate: (id: string, text: string) => void
   onRemove: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const [focused, setFocused] = useState(false)
 
   return (
@@ -35,7 +37,7 @@ export function EditableLogItem({
           type="button"
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onRemove(log.id)}
-          aria-label="删除日志"
+          aria-label={t('common.deleteLog')}
         >
           <TrashIcon className="h-4 w-4" />
         </button>

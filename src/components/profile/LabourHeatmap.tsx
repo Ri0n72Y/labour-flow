@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { addDays, formatMinutes, todayKey } from '../../lib/date'
 import { getDailyActivity } from '../../lib/stats/labourStats'
 import type { LabourRecord } from '../../types/domain'
@@ -10,6 +11,7 @@ export function LabourHeatmap({
   labourRecords: LabourRecord[]
   days?: number
 }) {
+  const { t } = useTranslation()
   const cells = useMemo(() => {
     const activity = new Map(
       getDailyActivity(labourRecords).map((item) => [item.date, item]),
@@ -36,24 +38,30 @@ export function LabourHeatmap({
   return (
     <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-stone-950">劳动热力图</h2>
-        <span className="text-xs text-stone-500">过去 {days} 天</span>
+        <h2 className="text-base font-semibold text-stone-950">
+          {t('stats.heatmap')}
+        </h2>
+        <span className="text-xs text-stone-500">
+          {t('stats.heatmapPastDays', { count: days })}
+        </span>
       </div>
       <div className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto pb-1">
         {cells.map((cell) => (
           <div
             key={cell.date}
             className={`h-4 w-4 rounded-[3px] ${palette[cell.level]}`}
-            title={`${cell.date}：${cell.recordCount} 条，${formatMinutes(cell.durationMinutes)}`}
+            title={`${cell.date}：${t('common.recordsCount', {
+              count: cell.recordCount,
+            })}，${formatMinutes(cell.durationMinutes)}`}
           />
         ))}
       </div>
       <div className="mt-3 flex items-center justify-end gap-1 text-xs text-stone-500">
-        <span>少</span>
+        <span>{t('stats.heatmapLess')}</span>
         {palette.map((color) => (
           <span key={color} className={`h-3 w-3 rounded-[3px] ${color}`} />
         ))}
-        <span>多</span>
+        <span>{t('stats.heatmapMore')}</span>
       </div>
     </section>
   )

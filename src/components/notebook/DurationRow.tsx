@@ -1,5 +1,6 @@
 import { MinusIcon, PlusIcon } from '@heroicons/react/24/outline'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function DurationRow({
   duration,
@@ -12,6 +13,8 @@ export function DurationRow({
   onDecrease?: () => void
   onIncrease?: () => void
 }) {
+  const { t } = useTranslation()
+
   if (!duration) return null
 
   return (
@@ -19,9 +22,9 @@ export function DurationRow({
       <li className="pl-1 leading-8">
         <div className="flex h-8 items-center justify-between gap-3 overflow-hidden">
           <span className="inline-flex h-8 min-w-0 items-center">
-            用时{' '}
+            {t('record.duration')}{' '}
             {onDecrease ? (
-              <DurationButton label="减少用时" onClick={onDecrease}>
+              <DurationButton label={t('record.decreaseDuration')} onClick={onDecrease}>
                 <MinusIcon className="h-5 w-5" />
               </DurationButton>
             ) : (
@@ -31,7 +34,7 @@ export function DurationRow({
               {duration}
             </span>
             {onIncrease ? (
-              <DurationButton label="增加用时" onClick={onIncrease}>
+              <DurationButton label={t('record.increaseDuration')} onClick={onIncrease}>
                 <PlusIcon className="h-5 w-5" />
               </DurationButton>
             ) : (

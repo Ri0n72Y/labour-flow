@@ -4,10 +4,12 @@ import {
 } from '@heroicons/react/24/outline'
 import type { ChangeEvent } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { GitHubIcon } from '../components/icons/GitHubIcon'
 import { KeyIcon } from '../components/icons/KeyIcon'
 import { BadgeList } from '../components/profile/BadgeList'
 import { LabourHeatmap } from '../components/profile/LabourHeatmap'
+import { LanguageSelector } from '../components/profile/LanguageSelector'
 import { UserStatsCards } from '../components/profile/UserStatsCards'
 import { ProjectCard } from '../components/project/ProjectCard'
 import { useLabourStore } from '../store/useLabourStore'
@@ -21,6 +23,7 @@ export function UserPage({
 }: {
   onOpenProject?: (projectId: string) => void
 }) {
+  const { t } = useTranslation()
   const user = useUserStore()
   const signedRecords = useLaborStore((state) => state.records)
   const exportJson = useLaborStore((state) => state.exportJson)
@@ -35,7 +38,10 @@ export function UserPage({
   const [keyMessage, setKeyMessage] = useState('')
   const [profileMessage, setProfileMessage] = useState('')
   const hasKeys = isEd25519KeyPair(user.publicKeyJwk, user.privateKeyJwk)
-  const displayId = `${user.uid || '劳动者'}#${publicKeyLabel(user.publicKeyJwk)}`
+  const publicKeyShort = user.publicKeyJwk
+    ? publicKeyLabel(user.publicKeyJwk)
+    : t('user.publicKeyNotGenerated')
+  const displayId = `${user.uid || t('common.worker')}#${publicKeyShort}`
   const cleanUidDraft = uidDraft.trim() || '劳动者'
   const uidChanged = cleanUidDraft !== user.uid
   const stats = computeUserStats()
@@ -53,19 +59,19 @@ export function UserPage({
     user.setUid(uidDraft)
     setUidDraft(cleanUidDraft)
     updateUserProfile({ displayName: cleanUidDraft })
-    setProfileMessage('名称已保存，完整身份已更新。')
+    setProfileMessage(t('user.profileSaved'))
   }
 
   const handleGenerateKeys = async () => {
     setKeyMessage('')
     try {
       await user.generateKeys()
-      setKeyMessage('密钥已生成并保存在本地。')
+      setKeyMessage(t('user.keyGenerated'))
     } catch (error) {
       setKeyMessage(
         error instanceof Error
           ? error.message
-          : '密钥生成失败，请确认正在使用安全上下文。',
+          : t('user.keyFailed'),
       )
     }
   }
@@ -91,9 +97,11 @@ export function UserPage({
     <div className="space-y-4 text-left">
       {!hasKeys && (
         <section className="rounded-md border border-amber-200 bg-amber-50 p-4 shadow-sm">
-          <p className="text-sm font-semibold text-amber-900">还没有完成注册</p>
+          <p className="text-sm font-semibold text-amber-900">
+            {t('user.noRegistrationTitle')}
+          </p>
           <p className="mt-1 text-sm text-amber-800">
-            生成密钥后，劳动流才能为劳动记录签名并确认记录属于你。
+            {t('user.noRegistrationBody')}
           </p>
         </section>
       )}
@@ -105,7 +113,7 @@ export function UserPage({
               <img
                 className="h-full w-full object-cover"
                 src={user.avatarDataUrl}
-                alt="用户头像"
+                alt={t('user.avatarAlt')}
               />
             ) : (
               <UserCircleIcon className="h-12 w-12 text-stone-400" />
@@ -119,7 +127,7 @@ export function UserPage({
           </label>
           <div className="min-w-0 flex-1">
             <label className="text-sm font-medium text-stone-600">
-              用户名
+              {t('user.username')}
               <input
                 className="input mt-1"
                 value={uidDraft}
@@ -135,7 +143,7 @@ export function UserPage({
               type="button"
               onClick={handleSaveUid}
             >
-              保存
+              {t('common.save')}
             </button>
             {profileMessage && (
               <p className="mt-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
@@ -145,11 +153,13 @@ export function UserPage({
           </div>
         </div>
         <div className="mt-4 rounded-md bg-stone-50 p-3">
-          <p className="text-xs font-semibold text-stone-500">完整身份</p>
+          <p className="text-xs font-semibold text-stone-500">
+            {t('user.displayId')}
+          </p>
           <p className="mt-1 break-all text-sm text-stone-950">{displayId}</p>
         </div>
         <label className="mt-3 block text-sm font-medium text-stone-700">
-          主要方向
+          {t('user.mainDirection')}
           <input
             className="input mt-1"
             value={userProfile.mainDirection ?? ''}
@@ -159,20 +169,26 @@ export function UserPage({
           />
         </label>
         <label className="mt-3 block text-sm font-medium text-stone-700">
-          对外说明
+          {t('user.bio')}
           <textarea
             className="input mt-1 min-h-20 resize-y"
             value={userProfile.bio ?? ''}
-            placeholder="写一句对外展示的劳动说明"
+            placeholder={t('user.bioPlaceholder')}
             onChange={(event) => updateUserProfile({ bio: event.target.value })}
           />
         </label>
       </section>
 
+      <LanguageSelector />
+
       <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-stone-950">密钥管理</h2>
+        <h2 className="text-base font-semibold text-stone-950">
+          {t('user.keyManagement')}
+        </h2>
         <p className="mt-2 text-sm text-stone-500">
-          公钥前八位：{publicKeyLabel(user.publicKeyJwk)}
+          {t('user.publicKeyPrefix', {
+            key: publicKeyShort,
+          })}
         </p>
         <button
           className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-teal-700 px-4 text-sm font-semibold text-white"
@@ -180,7 +196,7 @@ export function UserPage({
           onClick={handleGenerateKeys}
         >
           <KeyIcon />
-          生成 / 重新生成密钥
+          {t('user.generateKey')}
         </button>
         {keyMessage && (
           <p className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
@@ -193,7 +209,9 @@ export function UserPage({
       <LabourHeatmap labourRecords={records} />
 
       <section className="space-y-3">
-        <h2 className="px-1 text-base font-semibold text-stone-950">当前项目与最近进展</h2>
+        <h2 className="px-1 text-base font-semibold text-stone-950">
+          {t('user.currentProjects')}
+        </h2>
         {currentProjects.map((project) => (
           <ProjectCard
             key={project.id}
@@ -207,9 +225,11 @@ export function UserPage({
       <BadgeList badges={badges} />
 
       <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-stone-950">数据导出</h2>
+        <h2 className="text-base font-semibold text-stone-950">
+          {t('user.dataExport')}
+        </h2>
         <p className="mt-2 text-sm text-stone-500">
-          当前共有 {signedRecords.length} 条已签名劳动记录。
+          {t('user.signedRecordsCount', { count: signedRecords.length })}
         </p>
         <button
           className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-stone-950 px-4 text-sm font-semibold text-white"
@@ -217,7 +237,7 @@ export function UserPage({
           onClick={handleExport}
         >
           <DocumentArrowDownIcon className="h-5 w-5" />
-          导出 JSON
+          {t('user.exportJson')}
         </button>
       </section>
 

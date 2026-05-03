@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { formatMinutes } from '../../lib/date'
 import type { Project, ProjectStats } from '../../types/domain'
 
@@ -10,6 +11,8 @@ export function ProjectCard({
   stats: ProjectStats
   onOpen?: () => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <article className="rounded-md border border-teal-100 bg-teal-50/35 p-4 text-left shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -18,24 +21,28 @@ export function ProjectCard({
             {project.title}
           </h3>
           <p className="mt-1 line-clamp-2 text-sm text-stone-500">
-            {project.description || '还没有项目说明'}
+            {project.description || t('projectCard.noDescription')}
           </p>
         </div>
         {project.isArchived && (
           <span className="rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-500">
-            已归档
+            {t('common.archived')}
           </span>
         )}
       </div>
       <p className="mt-3 rounded-md bg-white/65 px-3 py-2 text-sm leading-6 text-stone-700">
-        {stats.recentProgress}
+        {stats.recordCount > 0
+          ? stats.recentProgress
+          : t('projectCard.noRecentProgress')}
       </p>
       <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-stone-600">
         <span className="rounded-full bg-white/70 px-2.5 py-1">
-          {stats.recordCount} 条记录
+          {t('common.recordsCount', { count: stats.recordCount })}
         </span>
         <span className="rounded-full bg-white/70 px-2.5 py-1">
-          本周 {formatMinutes(stats.thisWeekDurationMinutes)}
+          {t('projectCard.thisWeek', {
+            duration: formatMinutes(stats.thisWeekDurationMinutes),
+          })}
         </span>
       </div>
       {onOpen && (
@@ -44,7 +51,7 @@ export function ProjectCard({
           type="button"
           onClick={onOpen}
         >
-          查看项目
+          {t('projectCard.details')}
         </button>
       )}
     </article>

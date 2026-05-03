@@ -1,12 +1,26 @@
+import { useTranslation } from 'react-i18next'
 import { formatMinutes } from '../../lib/date'
 import type { UserStats } from '../../types/domain'
 
 export function UserStatsCards({ stats }: { stats: UserStats }) {
+  const { t } = useTranslation()
   const items = [
-    { label: '连续记录', value: `${stats.currentStreak} 天` },
-    { label: '最近 7 天', value: `${stats.activeDays7} 天活跃` },
-    { label: '最近 30 天', value: `${stats.activeDays30} 天活跃` },
-    { label: '总劳动时长', value: formatMinutes(stats.totalDurationMinutes) },
+    {
+      label: t('stats.currentStreak'),
+      value: t('stats.days', { count: stats.currentStreak }),
+    },
+    {
+      label: t('stats.recent7'),
+      value: t('stats.activeDays', { count: stats.activeDays7 }),
+    },
+    {
+      label: t('stats.recent30'),
+      value: t('stats.activeDays', { count: stats.activeDays30 }),
+    },
+    {
+      label: t('stats.totalDuration'),
+      value: formatMinutes(stats.totalDurationMinutes),
+    },
   ]
 
   return (

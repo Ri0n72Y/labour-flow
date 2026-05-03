@@ -7,6 +7,7 @@ import {
 } from '@heroicons/react/24/outline'
 import type { KeyboardEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { LaborLogEntry } from '../interfaces'
 import { markdownListItems } from '../lib/markdown/listRendering'
 import { nextListPrefix, insertAtCursor } from '../lib/notebook/textEditing'
@@ -16,11 +17,6 @@ import { DurationRow } from './notebook/DurationRow'
 import { EditableLogItem } from './notebook/EditableLogItem'
 import { useAutoGrowTextarea } from './notebook/useAutoGrowTextarea'
 import { RadioSwitch } from './RadioSwitch'
-
-const listStyleOptions = [
-  { value: 'unordered', label: '无序列表', icon: ListBulletIcon },
-  { value: 'ordered', label: '有序列表', icon: NumberedListIcon },
-] as const
 
 interface SpeechRecognitionLike {
   lang: string
@@ -66,12 +62,17 @@ export function Notebook({
   onDecreaseDuration?: () => void
   onIncreaseDuration?: () => void
 }) {
+  const { t } = useTranslation()
   const [speechActive, setSpeechActive] = useState(false)
   const activeInputRef = useRef<HTMLTextAreaElement | null>(null)
   const LogList = listStyle === 'ordered' ? 'ol' : 'ul'
   const shownDuration =
     durationText ??
     (typeof durationHours === 'number' ? durationLabel(durationHours) : '')
+  const listStyleOptions = [
+    { value: 'unordered', label: t('record.unorderedList'), icon: ListBulletIcon },
+    { value: 'ordered', label: t('record.orderedList'), icon: NumberedListIcon },
+  ] as const
   useAutoGrowTextarea(activeInputRef, activeText)
 
   useEffect(() => {
@@ -133,10 +134,12 @@ export function Notebook({
   return (
     <section className="notebook-paper rounded-md border border-amber-200 p-4 text-left shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-stone-950">劳动日志</h2>
+        <h2 className="text-base font-semibold text-stone-950">
+          {t('record.labourLog')}
+        </h2>
         {onListStyleChange && (
           <RadioSwitch
-            ariaLabel="列表风格"
+            ariaLabel={t('record.listStyle')}
             options={listStyleOptions}
             value={listStyle}
             onChange={onListStyleChange}
@@ -169,7 +172,7 @@ export function Notebook({
           <textarea
             ref={activeInputRef}
             className="notebook-input notebook-active-input"
-            placeholder="记录刚完成的一小步劳动..."
+            placeholder={t('record.logPlaceholder')}
             rows={1}
             value={activeText}
             onChange={(event) => onChangeActive(event.target.value)}
@@ -179,7 +182,7 @@ export function Notebook({
             className="inline-flex h-9 w-9 items-center justify-center rounded-md text-teal-700 transition hover:bg-teal-50"
             type="button"
             onClick={startSpeech}
-            aria-label="语音输入"
+            aria-label={t('record.speechInput')}
           >
             <MicrophoneIcon
               className={cn('h-5 w-5', speechActive && 'text-red-500')}
@@ -194,7 +197,7 @@ export function Notebook({
                 activeInputRef.current?.focus()
               )
             }}
-            aria-label="确认日志"
+            aria-label={t('record.confirmLog')}
           >
             <CheckIcon className="h-5 w-5" />
           </button>
@@ -206,7 +209,7 @@ export function Notebook({
           onIncrease={onIncreaseDuration}
         />
         <p className="text-xs text-stone-400">
-          Shift + Enter 确认，Enter 换行
+          {t('record.shortcutHint')}
         </p>
       </div>
     </section>
@@ -220,6 +223,8 @@ function ReadOnlyLogItem({
   log: LaborLogEntry
   onRemove: (id: string) => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <li className="group pl-1">
       <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -230,7 +235,7 @@ function ReadOnlyLogItem({
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 opacity-70 transition hover:bg-red-50"
           type="button"
           onClick={() => onRemove(log.id)}
-          aria-label="删除日志"
+          aria-label={t('common.deleteLog')}
         >
           <TrashIcon className="h-4 w-4" />
         </button>

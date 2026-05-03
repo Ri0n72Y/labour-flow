@@ -1,23 +1,25 @@
 import { UserCircleIcon } from '@heroicons/react/24/outline'
+import { useTranslation } from 'react-i18next'
 import { useUserStore } from '../stores/userStore'
 import { isEd25519KeyPair, publicKeyLabel } from '../utils/crypto'
 
 export function UserIdentityBadge() {
+  const { t } = useTranslation()
   const uid = useUserStore((state) => state.uid)
   const avatarDataUrl = useUserStore((state) => state.avatarDataUrl)
   const publicKeyJwk = useUserStore((state) => state.publicKeyJwk)
   const privateKeyJwk = useUserStore((state) => state.privateKeyJwk)
   const hasKeys = isEd25519KeyPair(publicKeyJwk, privateKeyJwk)
-  const displayId = `${uid || '劳动者'}#${publicKeyLabel(publicKeyJwk)}`
+  const displayId = `${uid || t('common.worker')}#${publicKeyLabel(publicKeyJwk)}`
 
   if (!hasKeys) {
     return (
       <div
         className="flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-xs text-stone-500 ring-1 ring-stone-200 opacity-70"
-        title="未注册"
+        title={t('user.unregistered')}
       >
         <UserCircleIcon className="h-5 w-5" />
-        未注册
+        {t('user.unregistered')}
       </div>
     )
   }
@@ -32,7 +34,7 @@ export function UserIdentityBadge() {
           <img
             className="h-full w-full object-cover"
             src={avatarDataUrl}
-            alt="用户头像"
+            alt={t('user.avatarAlt')}
           />
         ) : (
           <UserCircleIcon className="h-5 w-5 text-stone-400" />
