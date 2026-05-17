@@ -19,11 +19,13 @@ export function ProjectSelector({
   selectedProjectId,
   onChange,
   onCreate,
+  embedded = false,
 }: {
   projects: Project[]
   selectedProjectId: string
   onChange: (projectId: string) => void
   onCreate: () => void
+  embedded?: boolean
 }) {
   const { t } = useTranslation()
   const selectedProject = projects.find(
@@ -32,7 +34,14 @@ export function ProjectSelector({
   const selectedProjectTitle = selectedProject?.title ?? t('record.defaultProject')
 
   return (
-    <section className="notebook-paper grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-amber-200 p-3 text-left shadow-sm">
+    <section
+      className={cn(
+        'grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 text-left',
+        embedded
+          ? 'px-4 pb-3 pt-4'
+          : 'notebook-paper rounded-md border border-amber-200 p-3 shadow-sm',
+      )}
+    >
       <div className="contents">
         <FolderIcon className="h-4 w-4 text-teal-700" />
         <h2 className="text-base font-semibold text-stone-950">

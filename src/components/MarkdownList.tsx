@@ -1,34 +1,38 @@
 import {
-  getMarkdownListStyle,
-  markdownListItems,
+  markdownListLines,
   type MarkdownListStyle,
 } from '../lib/markdown/listRendering'
 import { useTranslation } from 'react-i18next'
 
 export function MarkdownList({
   text,
-  listStyle = getMarkdownListStyle(text),
+  listStyle,
 }: {
   text: string
   listStyle?: MarkdownListStyle
 }) {
   const { t } = useTranslation()
-  const items = markdownListItems(text)
-  const List = listStyle === 'ordered' ? 'ol' : 'ul'
+  void listStyle
+  const lines = markdownListLines(text)
 
-  if (items.length === 0) {
+  if (lines.length === 0) {
     return <p className="text-sm text-stone-500">{t('common.noContent')}</p>
   }
 
   return (
-    <List
-      className={`space-y-1 pl-5 text-sm leading-6 text-stone-800 ${
-        listStyle === 'ordered' ? 'list-decimal' : 'list-disc'
-      }`}
-    >
-      {items.map((item, index) => (
-        <li key={`${item}-${index}`}>{item}</li>
+    <div className="space-y-1 text-sm leading-6 text-stone-800">
+      {lines.map((line, index) => (
+        <div
+          key={`${line.content}-${index}`}
+          className="grid grid-cols-[0.5rem_1fr] gap-1"
+          style={{ paddingLeft: `${line.level * 1.25}rem` }}
+        >
+          <span className="text-right font-medium text-stone-500">
+            {line.marker}
+          </span>
+          <span>{line.content}</span>
+        </div>
       ))}
-    </List>
+    </div>
   )
 }

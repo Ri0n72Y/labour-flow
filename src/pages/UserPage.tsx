@@ -2,6 +2,7 @@ import {
   DocumentArrowDownIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
+import { Switch } from '@headlessui/react'
 import type { ChangeEvent } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,6 +19,7 @@ import { UserStatsCards } from '../components/profile/UserStatsCards'
 import { ProjectCard } from '../components/project/ProjectCard'
 import { useLabourStore } from '../store/useLabourStore'
 import { useLaborStore } from '../stores/laborStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useUserStore } from '../stores/userStore'
 import { isEd25519KeyPair, publicKeyLabel } from '../utils/crypto'
 import { formatDate } from '../utils/time'
@@ -38,6 +40,8 @@ export function UserPage({
   const updateUserProfile = useLabourStore((state) => state.updateUserProfile)
   const computeUserStats = useLabourStore((state) => state.computeUserStats)
   const computeProjectStats = useLabourStore((state) => state.computeProjectStats)
+  const autoSignRecords = useSettingsStore((state) => state.autoSignRecords)
+  const setAutoSignRecords = useSettingsStore((state) => state.setAutoSignRecords)
   const [uidDraft, setUidDraft] = useState(user.uid)
   const [keyMessage, setKeyMessage] = useState('')
   const [profileMessage, setProfileMessage] = useState('')
@@ -184,6 +188,29 @@ export function UserPage({
       </section>
 
       <LanguageSelector />
+
+      <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-stone-950">
+              {t('user.localSettings')}
+            </h2>
+            <p className="mt-1 text-sm text-stone-500">
+              {t('user.autoSignSubtitle')}
+            </p>
+          </div>
+          <Switch
+            checked={autoSignRecords}
+            className={`${autoSignRecords ? 'bg-teal-700' : 'bg-stone-300'} relative inline-flex h-8 w-16 shrink-0 items-center rounded-full transition`}
+            onChange={setAutoSignRecords}
+          >
+            <span className="sr-only">{t('user.autoSign')}</span>
+            <span
+              className={`${autoSignRecords ? 'translate-x-9' : 'translate-x-1'} inline-block h-6 w-6 rounded-full bg-white transition`}
+            />
+          </Switch>
+        </div>
+      </section>
 
       <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold text-stone-950">

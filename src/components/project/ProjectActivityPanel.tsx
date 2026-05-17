@@ -1,6 +1,6 @@
 import { SparklesIcon } from '@heroicons/react/24/outline'
 import { useTranslation } from 'react-i18next'
-import { formatMinutes } from '../../lib/date'
+import { groupLabourRecordThreads } from '../../lib/records/labourRecordCards'
 import type {
   LabourRecord,
   PromptTemplate,
@@ -9,6 +9,7 @@ import type {
 } from '../../types/domain'
 import { HeadlessTextarea } from '../forms/HeadlessFields'
 import { PromptEditor } from '../prompt/PromptEditor'
+import { LabourRecordCard } from '../record/LabourRecordCard'
 
 export function ProjectActivityPanel({
   currentPlan,
@@ -21,6 +22,7 @@ export function ProjectActivityPanel({
   projectPrompt,
   projectRecords,
   projectSnapshots,
+  projectTitle,
 }: {
   currentPlan?: WeeklyPlan
   generating: boolean
@@ -32,8 +34,10 @@ export function ProjectActivityPanel({
   projectPrompt?: PromptTemplate
   projectRecords: LabourRecord[]
   projectSnapshots: WeeklySnapshot[]
+  projectTitle: string
 }) {
   const { t } = useTranslation()
+  const recordThreads = groupLabourRecordThreads(projectRecords)
 
   return (
     <>
@@ -65,25 +69,18 @@ export function ProjectActivityPanel({
           {t('projectDetail.projectLog')}
         </h2>
         <div className="mt-3 space-y-3">
-          {projectRecords.length === 0 ? (
+          {recordThreads.length === 0 ? (
             <p className="text-sm text-stone-500">
               {t('projectDetail.noRecords')}
             </p>
           ) : (
-            projectRecords.map((record) => (
-              <article key={record.id} className="rounded-md bg-stone-50 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-stone-950">
-                    {record.date}
-                  </span>
-                  <span className="text-xs text-stone-500">
-                    {formatMinutes(record.durationMinutes)}
-                  </span>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-stone-700">
-                  {record.content}
-                </p>
-              </article>
+            recordThreads.map((thread) => (
+              <LabourRecordCard
+                key={thread.root.id}
+                history={thread.history}
+                latest={thread.latest}
+                projectTitle={projectTitle}
+              />
             ))
           )}
         </div>

@@ -43,6 +43,8 @@ interface LabourStoreState {
   deleteProject: (id: string) => boolean
   addLabourRecord: (record: LabourRecordInput) => LabourRecord
   updateLabourRecord: (id: string, record: Partial<LabourRecord>) => void
+  patchLabourRecord: (id: string, record: Partial<LabourRecord>) => LabourRecord | null
+  signLabourRecord: (id: string, signature: string, signedRecordWid: string) => void
   deleteLabourRecord: (id: string) => void
   addWeeklyPlan: (plan: WeeklyPlanInput) => WeeklyPlan
   updateWeeklyPlan: (id: string, plan: Partial<WeeklyPlan>) => void
@@ -189,8 +191,42 @@ export const useLabourStore = create<LabourStoreState>()(
         updateLabourRecord: (id, recordInput) =>
           set((state) => {
             const labourRecords = state.labourRecords.map((record) =>
-              record.id === id
+              record.id === id && !record.signature
                 ? { ...record, ...recordInput, updatedAt: now() }
+                : record,
+            )
+            return {
+              labourRecords,
+              badges: refreshBadges({ ...state, labourRecords }),
+            }
+          }),
+        patchLabourRecord: (id, recordInput) => {
+          const source = get().labourRecords.find((record) => record.id === id)
+          if (!source) return null
+          const timestamp = now()
+          const patch: LabourRecord = {
+            ...source,
+            ...recordInput,
+            id: createId(),
+            patchOf: source.patchOf ?? source.id,
+            signature: undefined,
+            signedAt: undefined,
+            signedRecordWid: undefined,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          }
+          set((state) => {
+            const next = { ...state, labourRecords: [patch, ...state.labourRecords] }
+            return { labourRecords: next.labourRecords, badges: refreshBadges(next) }
+          })
+          return patch
+        },
+        signLabourRecord: (id, signature, signedRecordWid) =>
+          set((state) => {
+            const timestamp = now()
+            const labourRecords = state.labourRecords.map((record) =>
+              record.id === id
+                ? { ...record, signature, signedAt: timestamp, signedRecordWid, updatedAt: timestamp }
                 : record,
             )
             return {
