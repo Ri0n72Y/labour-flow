@@ -32,6 +32,7 @@ export function RecordModePill({
   onResumeTimer,
   onStopTimer,
   onResetDraft,
+  embedded = false,
 }: {
   mode: RecordMode
   status: RecordStatus
@@ -47,6 +48,7 @@ export function RecordModePill({
   onResumeTimer: () => void
   onStopTimer: () => void
   onResetDraft: () => void
+  embedded?: boolean
 }) {
   const { t } = useTranslation()
   const hideModeSwitch =
@@ -59,8 +61,17 @@ export function RecordModePill({
   return (
     <section
       className={cn(
-        'rounded-full py-3 pl-5 pr-4 text-left shadow-sm transition-colors duration-200',
-        mode === 'timer' ? 'bg-stone-950 text-white' : 'bg-[#fffaf0] text-stone-950'
+        'text-left transition-colors duration-200',
+        embedded
+          ? 'border-t border-dashed border-amber-200 px-4 py-4'
+          : 'rounded-full py-3 pl-5 pr-4 shadow-sm',
+        mode === 'timer'
+          ? embedded
+            ? 'bg-stone-950 text-white'
+            : 'bg-stone-950 text-white'
+          : embedded
+            ? 'bg-transparent text-stone-950'
+            : 'bg-[#fffaf0] text-stone-950',
       )}
     >
       <div className="grid min-h-10 grid-cols-[1fr_auto] items-center gap-3">

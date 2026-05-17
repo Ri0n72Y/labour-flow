@@ -94,12 +94,19 @@ describe('record submission helpers', () => {
         date: '2026-05-03',
         description: prepared.description,
         duration: prepared.duration,
+        startAt: prepared.recordBase.startAt,
+        endAt: prepared.recordBase.endAt,
+        tags: prepared.recordBase.tags,
       }),
     ).toEqual({
       projectId: 'project-a',
       date: '2026-05-03',
       content: '1. define schema\n2. write tests',
+      startAt: prepared.recordBase.startAt,
+      endAt: prepared.recordBase.endAt,
+      durationSeconds: 5400,
       durationMinutes: 90,
+      tags: ['protocol'],
     })
   })
 

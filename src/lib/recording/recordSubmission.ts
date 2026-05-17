@@ -117,17 +117,39 @@ export function labourRecordInputFromPrepared({
   date,
   description,
   duration,
+  endAt,
+  startAt,
+  tags,
   projectId,
+  createdBy,
+  signature,
+  signedAt,
+  signedRecordWid,
 }: {
   date: string
   description: string
   duration: number
+  endAt?: string
+  startAt?: string
+  tags?: string[]
   projectId: string
+  createdBy?: string
+  signature?: string
+  signedAt?: string
+  signedRecordWid?: string
 }): LaborRecordInput {
   return {
     projectId,
     date,
     content: description,
+    startAt,
+    endAt,
+    durationSeconds: duration,
     durationMinutes: Math.round(duration / 60),
+    tags,
+    createdBy,
+    signature,
+    signedAt,
+    signedRecordWid,
   }
 }

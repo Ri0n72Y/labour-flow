@@ -10,7 +10,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { LaborLogEntry } from '../interfaces'
 import { markdownListItems } from '../lib/markdown/listRendering'
-import { nextListPrefix, insertAtCursor } from '../lib/notebook/textEditing'
+import {
+  indentMarkdownLines,
+  markdownNewlineAtCursor,
+} from '../lib/notebook/textEditing'
 import { durationLabel, type ListStyle } from '../lib/recording/recordFormatting'
 import { cn } from '../lib/styles/cn'
 import { HeadlessTextarea } from './forms/HeadlessFields'
@@ -41,6 +44,7 @@ export function Notebook({
   durationHours,
   durationText,
   durationMetaText,
+  embedded = false,
   onChangeActive,
   onCommit,
   onUpdate,
@@ -55,6 +59,7 @@ export function Notebook({
   durationHours?: number
   durationText?: string
   durationMetaText?: string
+  embedded?: boolean
   onChangeActive: (value: string) => void
   onCommit: () => void
   onUpdate?: (id: string, text: string) => void
@@ -103,8 +108,24 @@ export function Notebook({
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      const input = event.currentTarget
+      const result = indentMarkdownLines({
+        value: activeText,
+        start: input.selectionStart,
+        end: input.selectionEnd,
+        outdent: event.shiftKey,
+      })
+      onChangeActive(result.value)
+      window.requestAnimationFrame(() => {
+        input.selectionStart = result.start
+        input.selectionEnd = result.end
+      })
+      return
+    }
     if (event.key !== 'Enter') return
-    if (event.shiftKey) {
+    if (!event.shiftKey) {
       event.preventDefault()
       onCommit()
       window.requestAnimationFrame(() => activeInputRef.current?.focus())
@@ -113,27 +134,27 @@ export function Notebook({
 
     event.preventDefault()
     const input = event.currentTarget
-    const prefix = nextListPrefix(
-      activeText.slice(0, input.selectionStart),
-      listStyle
-    )
-    const insert = `\n${prefix}`
-    const nextValue = insertAtCursor(
+    const result = markdownNewlineAtCursor(
       activeText,
-      insert,
       input.selectionStart,
       input.selectionEnd
     )
-    const nextCursor = input.selectionStart + insert.length
-    onChangeActive(nextValue)
+    onChangeActive(result.value)
     window.requestAnimationFrame(() => {
-      input.selectionStart = nextCursor
-      input.selectionEnd = nextCursor
+      input.selectionStart = result.cursor
+      input.selectionEnd = result.cursor
     })
   }
 
   return (
-    <section className="notebook-paper rounded-md border border-amber-200 p-4 text-left shadow-sm">
+    <section
+      className={cn(
+        'text-left',
+        embedded
+          ? 'border-t border-dashed border-amber-200 px-4 py-4'
+          : 'notebook-paper rounded-md border border-amber-200 p-4 shadow-sm',
+      )}
+    >
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-stone-950">
           {t('record.labourLog')}

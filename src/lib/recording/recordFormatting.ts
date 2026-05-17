@@ -1,5 +1,5 @@
 import type { LaborLogEntry } from '../../interfaces'
-import { markdownListItems } from '../markdown/listRendering'
+import { normalizeMarkdownListText } from '../markdown/listRendering'
 
 export type ListStyle = 'unordered' | 'ordered'
 
@@ -58,9 +58,8 @@ export function descriptionFromLogs(
   logs: Array<Pick<LaborLogEntry, 'text'>>,
   listStyle: ListStyle
 ) {
-  const lines = logs.flatMap((log) => markdownListItems(log.text))
-  if (listStyle === 'ordered') {
-    return lines.map((line, index) => `${index + 1}. ${line}`).join('\n')
-  }
-  return lines.map((line) => `- ${line}`).join('\n')
+  return logs
+    .map((log) => normalizeMarkdownListText(log.text, listStyle))
+    .filter(Boolean)
+    .join('\n')
 }

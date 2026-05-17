@@ -1,5 +1,4 @@
 import {
-  ChartBarIcon,
   FolderIcon,
   PencilSquareIcon,
   UserCircleIcon,
@@ -11,9 +10,10 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RecordPage } from './pages/RecordPage'
 import { UserPage } from './pages/UserPage'
-import { ViewPage } from './pages/ViewPage'
+import { useUserStore } from './stores/userStore'
+import { isEd25519KeyPair } from './utils/crypto'
 
-type TabId = 'record' | 'view' | 'projects' | 'user'
+type TabId = 'record' | 'projects' | 'user'
 
 const tabs: Array<{
   id: TabId
@@ -21,26 +21,34 @@ const tabs: Array<{
   icon: ComponentType<{ className?: string }>
 }> = [
   { id: 'record', labelKey: 'app.tabs.record', icon: PencilSquareIcon },
-  { id: 'view', labelKey: 'app.tabs.view', icon: ChartBarIcon },
   { id: 'projects', labelKey: 'app.tabs.projects', icon: FolderIcon },
   { id: 'user', labelKey: 'app.tabs.user', icon: UserCircleIcon },
 ]
 
 const pageTitle: Record<TabId, string> = {
   record: 'app.titles.record',
-  view: 'app.titles.view',
   projects: 'app.titles.projects',
   user: 'app.titles.user',
 }
 
 function App() {
   const { t } = useTranslation()
+  const publicKeyJwk = useUserStore((state) => state.publicKeyJwk)
+  const privateKeyJwk = useUserStore((state) => state.privateKeyJwk)
   const [activeTab, setActiveTab] = useState<TabId>('record')
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
+  const hasKeys = isEd25519KeyPair(publicKeyJwk, privateKeyJwk)
+  const showUserShortcut = hasKeys && activeTab !== 'user'
 
   const openProject = (projectId: string) => {
     setActiveProjectId(projectId)
     setActiveTab('projects')
+  }
+
+  const openUserPage = () => {
+    if (!activeProjectId && activeTab === 'user') return
+    setActiveProjectId(null)
+    setActiveTab('user')
   }
 
   return (
@@ -55,10 +63,14 @@ function App() {
               {activeProjectId ? t('app.projectDetail') : t(pageTitle[activeTab])}
             </h1>
           </div>
-          <UserIdentityBadge />
+          {showUserShortcut && <UserIdentityBadge onOpenUser={openUserPage} />}
         </header>
 
-        <section className="flex-1 overflow-y-auto px-4 pb-24 pt-4">
+        <section
+          className={`flex-1 overflow-y-auto px-4 pt-4 ${
+            hasKeys ? 'pb-24' : 'pb-4'
+          }`}
+        >
           {activeProjectId ? (
             <ProjectDetailPage
               projectId={activeProjectId}
@@ -67,7 +79,6 @@ function App() {
           ) : (
             <>
               {activeTab === 'record' && <RecordPage />}
-              {activeTab === 'view' && <ViewPage />}
               {activeTab === 'projects' && (
                 <ProjectsPage onOpenProject={openProject} />
               )}
@@ -76,32 +87,34 @@ function App() {
           )}
         </section>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md border-t border-stone-200 bg-white/95 px-3 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
-          <div className="grid grid-cols-4 gap-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              const active = !activeProjectId && activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  className={`flex h-14 flex-col items-center justify-center rounded-md text-xs font-medium transition ${
-                    active
-                      ? 'bg-teal-700 text-white'
-                      : 'text-stone-500 hover:bg-stone-100'
-                  }`}
-                  type="button"
-                  onClick={() => {
-                    setActiveProjectId(null)
-                    setActiveTab(tab.id)
-                  }}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="mt-1">{t(tab.labelKey)}</span>
-                </button>
-              )
-            })}
-          </div>
-        </nav>
+        {hasKeys && (
+          <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md border-t border-stone-200 bg-white/95 px-3 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
+            <div className="grid grid-cols-3 gap-2">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                const active = !activeProjectId && activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    className={`flex h-14 flex-col items-center justify-center rounded-md text-xs font-medium transition ${
+                      active
+                        ? 'bg-teal-700 text-white'
+                        : 'text-stone-500 hover:bg-stone-100'
+                    }`}
+                    type="button"
+                    onClick={() => {
+                      setActiveProjectId(null)
+                      setActiveTab(tab.id)
+                    }}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="mt-1">{t(tab.labelKey)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </nav>
+        )}
       </div>
     </main>
   )

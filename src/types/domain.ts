@@ -27,6 +27,15 @@ export interface LabourRecord {
   date: string
   content: string
   durationMinutes: number
+  startAt?: string
+  endAt?: string
+  durationSeconds?: number
+  tags?: string[]
+  createdBy?: string
+  signature?: string
+  signedAt?: string
+  signedRecordWid?: string
+  patchOf?: string
   createdAt: string
   updatedAt: string
 }

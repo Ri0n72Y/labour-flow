@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useUserStore } from '../stores/userStore'
 import { isEd25519KeyPair, publicKeyLabel } from '../utils/crypto'
 
-export function UserIdentityBadge() {
+export function UserIdentityBadge({ onOpenUser }: { onOpenUser?: () => void }) {
   const { t } = useTranslation()
   const uid = useUserStore((state) => state.uid)
   const avatarDataUrl = useUserStore((state) => state.avatarDataUrl)
@@ -24,11 +24,8 @@ export function UserIdentityBadge() {
     )
   }
 
-  return (
-    <div
-      className="flex min-w-0 max-w-[46%] items-center gap-2 rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-stone-200"
-      title={displayId}
-    >
+  const content = (
+    <>
       <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-100">
         {avatarDataUrl ? (
           <img
@@ -43,6 +40,29 @@ export function UserIdentityBadge() {
       <span className="min-w-0 truncate text-sm font-extralight text-stone-500">
         {displayId}
       </span>
+    </>
+  )
+
+  if (onOpenUser) {
+    return (
+      <button
+        aria-label={t('app.tabs.user')}
+        className="flex min-w-0 max-w-[46%] items-center gap-2 rounded-full bg-white px-2 py-1 text-left shadow-sm ring-1 ring-stone-200 transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-teal-600"
+        title={displayId}
+        type="button"
+        onClick={onOpenUser}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <div
+      className="flex min-w-0 max-w-[46%] items-center gap-2 rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-stone-200"
+      title={displayId}
+    >
+      {content}
     </div>
   )
 }

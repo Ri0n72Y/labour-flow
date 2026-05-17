@@ -2,6 +2,7 @@ import { CheckIcon } from '@heroicons/react/24/outline'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Notebook } from '../components/Notebook'
+import { LabourRecordCard } from '../components/record/LabourRecordCard'
 import { ProjectSelector } from '../components/record/ProjectSelector'
 import { RecordModePill } from '../components/record/RecordModePill'
 import { RegistrationGate } from '../components/record/RegistrationGate'
@@ -25,10 +26,16 @@ import {
   resolveSelectedProjectId,
   sanitizeTagInput,
 } from '../lib/recording/recordSubmission'
+import {
+  getProjectTitle,
+  groupLabourRecordThreads,
+} from '../lib/records/labourRecordCards'
 import { useLabourStore } from '../store/useLabourStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useLaborStore } from '../stores/laborStore'
 import { useRecordingStore } from '../stores/recordingStore'
 import { useUserStore } from '../stores/userStore'
+import type { LabourRecord } from '../types/domain'
 import {
   isEd25519KeyPair,
   publicKeyPayload,
@@ -43,8 +50,12 @@ export function RecordPage() {
   const labourRecords = useLabourStore((state) => state.labourRecords)
   const createProject = useLabourStore((state) => state.createProject)
   const addLabourRecord = useLabourStore((state) => state.addLabourRecord)
+  const patchLabourRecord = useLabourStore((state) => state.patchLabourRecord)
+  const updateLabourRecord = useLabourStore((state) => state.updateLabourRecord)
+  const signDomainRecord = useLabourStore((state) => state.signLabourRecord)
   const addSignedRecord = useLaborStore((state) => state.addRecord)
   const tagHistory = useLaborStore((state) => state.tagHistory)
+  const autoSignRecords = useSettingsStore((state) => state.autoSignRecords)
   const user = useUserStore()
   const activeProjects = useMemo(
     () => getActiveProjects(projects),
@@ -59,6 +70,7 @@ export function RecordPage() {
   const [clockTick, setClockTick] = useState(0)
   const [tagInput, setTagInput] = useState('')
   const [signing, setSigning] = useState(false)
+  const [signingRecordId, setSigningRecordId] = useState('')
   const [message, setMessage] = useState('')
   const [registering, setRegistering] = useState(false)
 
@@ -91,6 +103,10 @@ export function RecordPage() {
       : durationLabel(recording.manualDurationHours)
   const durationMetaText =
     recording.mode === 'timer' ? formatStartTime(recording.startAt) : ''
+  const recordThreads = useMemo(
+    () => groupLabourRecordThreads(labourRecords),
+    [labourRecords]
+  )
 
   const ensureProjectId = () => {
     if (selectedProjectId) return selectedProjectId
@@ -135,7 +151,46 @@ export function RecordPage() {
     }
   }
 
-  const handleSign = async () => {
+  const signedPayloadFromRecord = (record: LabourRecord): Omit<LaborData, 'signature'> => ({
+    wid: record.signedRecordWid ?? record.id,
+    startAt: record.startAt ?? `${record.date}T00:00:00.000Z`,
+    endAt: record.endAt ?? `${record.date}T00:00:00.000Z`,
+    duration: record.durationSeconds ?? record.durationMinutes * 60,
+    createBy: record.createdBy ?? publicKeyPayload(user.publicKeyJwk),
+    createAt: record.createdAt,
+    outcome: '',
+    description: record.content,
+    tags: record.tags ?? [],
+  })
+
+  const signSavedRecord = async (record: LabourRecord, confirmFirst = true) => {
+    setMessage('')
+    if (!user.privateKeyJwk || !user.publicKeyJwk) {
+      setMessage(t('record.messages.keyRequired'))
+      return
+    }
+    if (
+      confirmFirst &&
+      !window.confirm(t('recordCard.signConfirm'))
+    ) {
+      return
+    }
+    const wid = record.signedRecordWid ?? crypto.randomUUID()
+    const recordBase = { ...signedPayloadFromRecord(record), wid }
+    setSigningRecordId(record.id)
+    try {
+      const signature = await signLaborRecord(recordBase, user.privateKeyJwk)
+      addSignedRecord({ ...recordBase, signature, logEntries: [] })
+      signDomainRecord(record.id, signature, wid)
+      setMessage(t('record.messages.signed'))
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t('record.messages.signFailed'))
+    } finally {
+      setSigningRecordId('')
+    }
+  }
+
+  const handleSaveRecord = async () => {
     setMessage('')
     if (!user.privateKeyJwk || !user.publicKeyJwk) {
       setMessage(t('record.messages.keyRequired'))
@@ -160,25 +215,42 @@ export function RecordPage() {
 
     setSigning(true)
     try {
-      const recordBase: Omit<LaborData, 'signature'> = prepared.recordBase
-      const signature = await signLaborRecord(recordBase, user.privateKeyJwk)
-      addSignedRecord({ ...recordBase, signature, logEntries: latest.logs })
+      let signature: string | undefined
+      if (autoSignRecords) {
+        signature = await signLaborRecord(prepared.recordBase, user.privateKeyJwk)
+        addSignedRecord({ ...prepared.recordBase, signature, logEntries: latest.logs })
+      }
       addLabourRecord(
         labourRecordInputFromPrepared({
           projectId: nextProjectId,
           date: todayKey(),
           description: prepared.description,
           duration: prepared.duration,
+          startAt: prepared.recordBase.startAt,
+          endAt: prepared.recordBase.endAt,
+          tags: prepared.recordBase.tags,
+          createdBy: prepared.recordBase.createBy,
+          signature,
+          signedAt: signature ? nowIso() : undefined,
+          signedRecordWid: prepared.recordBase.wid,
         })
       )
       recording.resetDraft()
       setTagInput('')
-      setMessage(t('record.messages.signed'))
+      setMessage(autoSignRecords ? t('record.messages.signed') : t('record.messages.savedUnsigned'))
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t('record.messages.signFailed'))
     } finally {
       setSigning(false)
     }
+  }
+
+  const handleEditRecord = (record: LabourRecord, updates: Partial<LabourRecord>) => {
+    if (record.signature) {
+      patchLabourRecord(record.id, updates)
+      return
+    }
+    updateLabourRecord(record.id, updates)
   }
 
   if (!hasKeys) {
@@ -193,85 +265,115 @@ export function RecordPage() {
 
   return (
     <div className="space-y-4">
-      <ProjectSelector
-        projects={activeProjects}
-        selectedProjectId={selectedProjectId}
-        onChange={setProjectId}
-        onCreate={createQuickProject}
-      />
-      <RecordModePill
-        mode={recording.mode}
-        status={recording.status}
-        startAt={recording.startAt}
-        endAt={recording.endAt}
-        elapsedSeconds={elapsedSeconds}
-        manualDurationHours={recording.manualDurationHours}
-        hasTimerDraft={hasTimerDraft}
-        onModeChange={recording.setMode}
-        onManualDurationChange={recording.setManualDuration}
-        onStartTimer={recording.startTimer}
-        onPauseTimer={recording.pauseTimer}
-        onResumeTimer={recording.resumeTimer}
-        onStopTimer={recording.stopTimer}
-        onResetDraft={recording.resetDraft}
-      />
+      <section className="notebook-paper overflow-hidden rounded-md border border-amber-200 text-left shadow-sm">
+        <ProjectSelector
+          embedded
+          projects={activeProjects}
+          selectedProjectId={selectedProjectId}
+          onChange={setProjectId}
+          onCreate={createQuickProject}
+        />
+        <RecordModePill
+          embedded
+          mode={recording.mode}
+          status={recording.status}
+          startAt={recording.startAt}
+          endAt={recording.endAt}
+          elapsedSeconds={elapsedSeconds}
+          manualDurationHours={recording.manualDurationHours}
+          hasTimerDraft={hasTimerDraft}
+          onModeChange={recording.setMode}
+          onManualDurationChange={recording.setManualDuration}
+          onStartTimer={recording.startTimer}
+          onPauseTimer={recording.pauseTimer}
+          onResumeTimer={recording.resumeTimer}
+          onStopTimer={recording.stopTimer}
+          onResetDraft={recording.resetDraft}
+        />
 
-      <Notebook
-        activeText={recording.activeText}
-        logs={recording.logs}
-        listStyle={listStyle}
-        durationHours={recording.manualDurationHours}
-        durationText={durationText}
-        durationMetaText={durationMetaText}
-        onChangeActive={recording.setActiveText}
-        onCommit={recording.commitActiveLog}
-        onUpdate={recording.updateLog}
-        onRemove={recording.removeLog}
-        onListStyleChange={setListStyle}
-        onDecreaseDuration={
-          recording.mode === 'manual'
-            ? () =>
-                recording.setManualDuration(
-                  clampDuration(recording.manualDurationHours - 0.5)
-                )
-            : undefined
-        }
-        onIncreaseDuration={
-          recording.mode === 'manual'
-            ? () =>
-                recording.setManualDuration(
-                  clampDuration(recording.manualDurationHours + 0.5)
-                )
-            : undefined
-        }
-      />
+        <Notebook
+          embedded
+          activeText={recording.activeText}
+          logs={recording.logs}
+          listStyle={listStyle}
+          durationHours={recording.manualDurationHours}
+          durationText={durationText}
+          durationMetaText={durationMetaText}
+          onChangeActive={recording.setActiveText}
+          onCommit={recording.commitActiveLog}
+          onUpdate={recording.updateLog}
+          onRemove={recording.removeLog}
+          onListStyleChange={setListStyle}
+          onDecreaseDuration={
+            recording.mode === 'manual'
+              ? () =>
+                  recording.setManualDuration(
+                    clampDuration(recording.manualDurationHours - 0.5)
+                  )
+              : undefined
+          }
+          onIncreaseDuration={
+            recording.mode === 'manual'
+              ? () =>
+                  recording.setManualDuration(
+                    clampDuration(recording.manualDurationHours + 0.5)
+                  )
+              : undefined
+          }
+        />
 
-      <TagNotebook
-        tags={recording.tags}
-        tagHistory={tagHistory}
-        value={tagInput}
-        onChange={setTagInput}
-        onToggle={recording.toggleTag}
-        onSubmit={submitTagInput}
-      />
+        <TagNotebook
+          embedded
+          tags={recording.tags}
+          tagHistory={tagHistory}
+          value={tagInput}
+          onChange={setTagInput}
+          onToggle={recording.toggleTag}
+          onSubmit={submitTagInput}
+        />
 
-      <button
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-stone-950 px-4 text-sm font-semibold text-white disabled:bg-stone-300"
-        disabled={!canSign || signing}
-        type="button"
-        onClick={() => {
-          void handleSign()
-        }}
-      >
-        <CheckIcon className="h-5 w-5" />
-        {signing ? t('record.signing') : t('record.finishAndSign')}
-      </button>
+        <div className="border-t border-dashed border-amber-200 px-4 py-4">
+          <button
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-stone-950 px-4 text-sm font-semibold text-white disabled:bg-stone-300"
+            disabled={!canSign || signing}
+            type="button"
+            onClick={() => {
+              void handleSaveRecord()
+            }}
+          >
+            <CheckIcon className="h-5 w-5" />
+            {signing ? t('record.saving') : autoSignRecords ? t('record.saveAndAutoSign') : t('record.saveUnsigned')}
+          </button>
+        </div>
+      </section>
 
       {message && (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-left text-sm text-amber-800">
           {message}
         </p>
       )}
+
+      <section className="space-y-3">
+        <h2 className="px-1 text-base font-semibold text-stone-950">
+          {t('record.recentCards')}
+        </h2>
+        {recordThreads.map((thread) => (
+          <LabourRecordCard
+            key={thread.root.id}
+            history={thread.history}
+            latest={thread.latest}
+            projects={activeProjects}
+            projectTitle={getProjectTitle(projects, thread.latest.projectId)}
+            signing={signingRecordId === thread.latest.id}
+            tagHistory={tagHistory}
+            onCreateProject={createQuickProject}
+            onEdit={handleEditRecord}
+            onSign={(record) => {
+              void signSavedRecord(record)
+            }}
+          />
+        ))}
+      </section>
     </div>
   )
 }

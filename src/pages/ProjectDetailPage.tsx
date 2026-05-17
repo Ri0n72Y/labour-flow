@@ -257,6 +257,7 @@ function ProjectDetailContent({
           projectPrompt={projectPrompt}
           projectRecords={projectRecords}
           projectSnapshots={projectSnapshots}
+          projectTitle={project.title}
           onGenerateSnapshot={() => {
             void handleGenerateSnapshot()
           }}
